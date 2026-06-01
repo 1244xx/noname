@@ -397,7 +397,6 @@ const skill = {
 			maixie: true,
 		},
 	},
-
 	zhanshou: {
 		trigger: { player: "phaseBegin" },
 		zhuSkill: true,
@@ -454,6 +453,179 @@ const skill = {
 		},
 		ai: { order: 1 },
 	},
+
+	qiaole: {
+		audio: 2,
+		forced: true,
+		locked: true,
+		trigger: { player: "loseAfter" },
+		filter(event, player) {
+			if (!event.hs || !event.hs.length) return false;
+			return event.hs.some(card => get.suit(card) === "spade");
+		},
+		async content(event, trigger, player) {
+			const spadeCards = trigger.hs.filter(card => get.suit(card) === "spade");
+			if (spadeCards.length > 0) {
+				player.logSkill("qiaole");
+				await player.draw(spadeCards.length);
+			}
+		},
+		ai: {
+			order: 3,
+			result: { player: 1 },
+		},
+	},
+	changpao: {
+		audio: 2,
+		frequent: false,
+		trigger: { player: ["phaseBegin", "phaseEnd"] },
+		filter(event, player) {
+			return player.countCards("h") > 0 && game.hasPlayer(p => p !== player && p.isIn());
+		},
+		async content(event, trigger, player) {
+			player.logSkill("changpao");
+			await executeChangpao(player, 0);
+		},
+		ai: {
+			order: 6,
+			result: { player: 1 },
+		},
+	},
+	feiqin: {
+		audio: 2,
+		frequent: false,
+		trigger: { player: "phaseAfter" },
+		filter(event, player) {
+			return player.storage.feiqin_round !== game.roundNumber;
+		},
+		async content(event, trigger, player) {
+			player.storage.feiqin_round = game.roundNumber;
+			player.logSkill("feiqin");
+			const cards = get.cards(1);
+			if (!cards || !cards.length) return;
+			const card = cards[0];
+			game.log(player, "翻开了牌堆顶牌", card);
+			await game.cardsDiscard(card);
+			const suit = get.suit(card);
+			if (suit !== "spade") {
+				game.log(player, "花色为", get.translation(suit), "，执行额外回合！");
+				await player.phase("feiqin");
+			} else {
+				game.log(player, "花色为♠，体力扣至0！");
+				await player.loseHp(player.hp);
+			}
+		},
+		ai: {
+			order: 9,
+			result: { player: 1 },
+		},
+	},
 };
+
+async function executeChangpao(initiator, depth) {
+	if (depth >= 99) {
+		game.log("长跑已达最大层数（99层），强制结束");
+		return;
+	}
+	if (initiator.countCards("h") === 0) return;
+
+	const discardResult = await initiator.chooseToDiscard("h", true, "长跑：请弃置一张点数为X的牌")
+		.set("filterCard", card => {
+			const num = get.number(card);
+			return typeof num === "number" && num > 0;
+		})
+		.set("ai", card => {
+			const num = get.number(card);
+			return num - get.value(card);
+		})
+		.forResult();
+
+	const discardedCard = discardResult.cards[0];
+	const X = get.number(discardedCard);
+
+	const targetResult = await initiator.chooseTarget(true, "长跑：请选择一名其他角色")
+		.set("filterTarget", (card, p, target) => target !== p)
+		.set("ai", target => {
+			const att = get.attitude(initiator, target);
+			return att < 0 ? 1 : -1;
+		})
+		.forResult();
+
+	const target = targetResult.targets[0];
+	initiator.logSkill("changpao", target);
+
+	const state = {
+		initiator,
+		target,
+		X,
+		currentFlipper: "initiator",
+		flippedCount: 0,
+		shaCard: null,
+		shaFinder: null,
+	};
+
+	while (state.flippedCount < state.X && !state.shaCard) {
+		const flipper = state.currentFlipper === "initiator" ? state.initiator : state.target;
+		const judgeResult = await flipper.judge(card => {
+			if (get.name(card) === "sha") return 1;
+			return 0;
+		}).forResult();
+		state.flippedCount++;
+		game.log(flipper, "判定了", judgeResult.card);
+
+		if (judgeResult.bool) {
+			state.shaCard = judgeResult.card;
+			state.shaFinder = state.currentFlipper;
+		} else {
+			state.currentFlipper = state.currentFlipper === "initiator" ? "target" : "initiator";
+		}
+	}
+
+	let vetoed = false;
+	let vetoer = null;
+
+	if (initiator.countCards("h") > 0) {
+		const ctrlResult = await initiator.chooseControl(["不废除", "废除"])
+			.set("prompt", "长跑：是否废除本轮翻牌结果？")
+			.set("ai", () => {
+				if (state.shaCard && state.shaFinder === "target") return "废除";
+				return "不废除";
+			})
+			.forResult();
+		if (ctrlResult.control === "废除") {
+			vetoed = true;
+			vetoer = initiator;
+		}
+	}
+
+	if (!vetoed && target.countCards("h") > 0) {
+		const ctrlResult = await target.chooseControl(["不废除", "废除"])
+			.set("prompt", "长跑：是否废除本轮翻牌结果？")
+			.set("ai", () => {
+				if (state.shaCard && state.shaFinder === "initiator") return "废除";
+				return "不废除";
+			})
+			.forResult();
+		if (ctrlResult.control === "废除") {
+			vetoed = true;
+			vetoer = target;
+		}
+	}
+
+	if (vetoed) {
+		game.log(vetoer, "废除了长跑的结果");
+		await executeChangpao(vetoer, depth + 1);
+	} else {
+		if (state.shaCard) {
+			const winner = state.shaFinder === "initiator" ? initiator : target;
+			const loser = state.shaFinder === "initiator" ? target : initiator;
+			game.log(winner, "翻到了杀，对", loser, "使用之");
+			await winner.gain(state.shaCard, "nodelay");
+			await winner.useCard(state.shaCard, loser, false);
+		} else {
+			game.log("长跑翻完" + X + "次牌，未翻到杀");
+		}
+	}
+}
 
 export default skill;

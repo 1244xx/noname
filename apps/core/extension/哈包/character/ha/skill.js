@@ -136,7 +136,7 @@ const skill = {
 		trigger: {
 			player: ["useCardAfter", "respondAfter"],
 		},
-		frequent:true,
+		frequent: true,
 		// 过滤条件：检查是否有基本牌且玩家有手牌或装备区的牌
 		filter(event, player) {
 			return event.card && get.type(event.card) == "basic" && player.countCards("he") > 0;
@@ -863,18 +863,18 @@ const skill = {
 		trigger: { player: "useCardAfter" },
 		frequent: true,
 		filter(event, player) {
+			if (_status.currentPhase !== player) {
+				return false;
+			}
 			if (!event.card || !event.card.cardid) {
 				return false;
 			}
-			
 			if (!player.storage._previous_qunqi_flag) {
 				return false;
 			}
-			
 			if (!player.storage._qunqi_lastCardName) {
 				return false;
 			}
-			
 			return true;
 		},
 		check(event, player) {
@@ -1236,7 +1236,7 @@ const skill = {
 		audio: 2,
 		forced: true,
 		locked: true,
-		trigger: { target: "useCardToBefore" },
+		trigger: { player: "useCardToBefore" },
 		filter(event, player) {
 			return event.card && event.card.name === "sha" && event.targets && event.targets.length > 0;
 		},
@@ -2408,7 +2408,7 @@ const skill = {
 				.set("prompt", "厨将：请选择将此牌视为桃还是酒")
 				.set("ai", () => {
 					if (_status.event.dying && _status.event.dying === player) return "jiu";
-					if (player.needsToRecover() > 0) return "tao";
+					if (player.isDamaged()) return "tao";
 					return "jiu";
 				})
 				.forResult();
@@ -2428,7 +2428,7 @@ const skill = {
 			result: {
 				player(player) {
 					if (_status.event.dying) return 10;
-					if (player.needsToRecover() > 0) return 3;
+					if (player.isDamaged()) return 3;
 					return 1;
 				},
 			},
@@ -2458,7 +2458,7 @@ const skill = {
 						.set("prompt", "厨将：请选择将此牌视为桃还是酒")
 						.set("ai", () => {
 							if (_status.event.dying && _status.event.dying === player) return "jiu";
-							if (player.needsToRecover() > 0) return "tao";
+							if (player.isDamaged()) return "tao";
 							return "jiu";
 						})
 						.forResult();

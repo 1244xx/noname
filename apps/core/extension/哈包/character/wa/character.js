@@ -21,6 +21,12 @@ const character = {
 		hujia: 3,
 		skills: [],
 	},
+	haxuefeng: {
+		sex: "male",
+		group: "wa",
+		hp: 3,
+		skills: ["qiaole", "changpao", "feiqin"],
+	},
 };
 for (let i in character) {
 	character[i].img = "extension/哈包/image/character/" + i + ".png";

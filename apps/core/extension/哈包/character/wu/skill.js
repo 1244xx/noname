@@ -609,45 +609,44 @@ const skill = {
 	gefang: {
 		audio: 2,
 		zhuSkill: true,
-		trigger: { global: "phaseDrawBegin1" },
+		limited: true,
+		trigger: { player: "phaseBegin" },
 		filter(event, player) {
-			return !event.numFixed && player.storage.gefang_active;
+			return !player.storage.gefang_used;
 		},
-		forced: true,
-		silent: true,
+		async cost(event, trigger, player) {
+			const result = await player
+				.chooseBool("革放：是否改变全场摸牌规则，改为摸当前体力值数量的牌（最多为五）？")
+				.set("ai", () => player.hp > 2)
+				.forResult();
+			event.result = { bool: result.bool };
+		},
 		async content(event, trigger, player) {
-			trigger.num = Math.min(trigger.player.hp, 5);
+			player.storage.gefang_used = true;
+			player.storage.gefang_active = true;
+			player.logSkill("gefang");
 		},
-		group: ["gefang_activate"],
+		group: ["gefang_effect"],
 		subSkill: {
-			activate: {
-				audio: 2,
+			effect: {
 				zhuSkill: true,
-				limited: true,
-				trigger: { player: "phaseBegin" },
+				trigger: { global: "phaseDrawBegin1" },
 				filter(event, player) {
-					return !player.storage.gefang_used;
+					return !event.numFixed && player.storage.gefang_active;
 				},
-				async cost(event, trigger, player) {
-					const result = await player
-						.chooseBool("革放：是否改变全场摸牌规则，改为摸当前体力值数量的牌（最多为五）？")
-						.set("ai", () => player.hp > 2)
-						.forResult();
-					event.result = { bool: result.bool };
-				},
+				forced: true,
+				silent: true,
 				async content(event, trigger, player) {
-					player.storage.gefang_used = true;
-					player.storage.gefang_active = true;
-					player.logSkill("gefang");
+					trigger.num = Math.min(trigger.player.hp, 5);
 				},
 				ai: {
-					order: 10,
+					order: 1,
 					result: { player: 2 },
 				},
 			},
 		},
 		ai: {
-			order: 1,
+			order: 10,
 			result: { player: 2 },
 		},
 	},

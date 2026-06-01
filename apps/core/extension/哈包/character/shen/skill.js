@@ -509,8 +509,7 @@ const skill = {
 		},
 	},
 	mengbu: {
-		forced: true,
-		locked: true,
+		frequent: true,
 		trigger: { global: "useSkill" },
 		filter(event, player) {
 			if (event.skill !== "huaquan") return false;
@@ -678,8 +677,7 @@ const skill = {
 		},
 	},
 	feiyu: {
-		forced: true,
-		locked: true,
+		frequent: true,
 		trigger: { global: "useSkill" },
 		filter(event, player) {
 			if (event.skill !== "huaquan") return false;
@@ -738,8 +736,7 @@ const skill = {
 		},
 	},
 	gongfang: {
-		forced: true,
-		locked: true,
+		frequent: true,
 		trigger: {
 			global: "gameStart",
 			player: ["useCardAfter", "respondAfter"],
@@ -1064,8 +1061,7 @@ const skill = {
 		},
 	},
 	shuijiao: {
-		forced: true,
-		locked: true,
+		frequent: true,
 		trigger: { player: ["phaseDrawEnd", "phaseJieshu"] },
 		filter(event, player) {
 			if (event.name === "phaseDrawEnd" && player.isTurnedOver()) return false;
