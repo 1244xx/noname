@@ -1093,29 +1093,13 @@ const skill = {
 
 	shazhang: {
 		audio: 2,
-		enable: "chooseToUse",
-		filter(event, player) {
-			return player.countCards("he", card => {
-				const info = lib.card[card.name];
-				return info && info.type === "equip" && info.subtype === "equip1";
-			}) > 0;
-		},
-		filterCard(card, player, event) {
-			const info = lib.card[card.name];
-			if (!info) return false;
-			return info.type === "equip" && info.subtype === "equip1";
-		},
-		selectCard: [1, Infinity],
-		position: "he",
-		discard: false,
-		lose: false,
-		async content(event, trigger, player) {
-			await player.recast(event.cards, null, null);
-		},
-		check(card) {
-			return 6 - get.value(card);
-		},
 		mod: {
+			cardRecastable(card, player) {
+				const info = get.info(card);
+				if (info && info.type === "equip" && info.subtype === "equip1") {
+					return true;
+				}
+			},
 			targetInRange(card, player, target) {
 				if (card.name === "sha" && get.suit(card) === "spade" && player.getEquips(1).length === 0) {
 					return true;
@@ -1157,7 +1141,7 @@ const skill = {
 				},
 			},
 			club: {
-				trigger: { player: "useCardToTargeted" },
+				trigger: { player: "shaHit" },
 				filter(event, player) {
 					if (!event.card || event.card.name !== "sha") return false;
 					if (get.suit(event.card) !== "club") return false;
@@ -1165,13 +1149,14 @@ const skill = {
 				},
 				forced: true,
 				async content(event, trigger, player) {
-					player.logSkill("shazhang", trigger.targets[0]);
-					if (!player.storage._shazhang_club_queue) player.storage._shazhang_club_queue = [];
-					player.storage._shazhang_club_queue.push(trigger.targets.map(t => t));
+					const target = trigger.target;
+					player.logSkill("shazhang", target);
 					player.storage._shazhang_club_card = trigger.card;
 					player.addTempSkill("shazhang_club_damage");
-					player.addTempSkill("shazhang_club_track");
-					player.addTempSkill("shazhang_club_after");
+					if (target && target.isIn()) {
+						player.logSkill("shazhang", target);
+						await applyShazhangSilent(target);
+					}
 				},
 			},
 			club_damage: {
@@ -1186,95 +1171,28 @@ const skill = {
 					trigger.num++;
 				},
 			},
-			club_track: {
-				trigger: { global: "respond" },
-				charlotte: true,
-				forced: true,
-				popup: false,
-				filter(event, player) {
-					if (!event.card || event.card.name !== "shan") return false;
-					const queue = player.storage._shazhang_club_queue;
-					if (!queue || !queue.length) return false;
-					const pending = queue[queue.length - 1];
-					return Array.isArray(pending) && pending.includes(event.player);
-				},
-				content(event, trigger, player) {
-					const queue = player.storage._shazhang_club_queue;
-					if (!queue || !queue.length) return;
-					for (let i = queue.length - 1; i >= 0; i--) {
-						const arr = queue[i];
-						if (!Array.isArray(arr)) continue;
-						const idx = arr.indexOf(trigger.player);
-						if (idx >= 0) arr.splice(idx, 1);
-					}
-				},
-			},
-			club_after: {
-				trigger: { player: "useCardAfter" },
-				charlotte: true,
-				forced: true,
-				popup: false,
-				filter(event, player) {
-					if (!event.card || event.card.name !== "sha") return false;
-					const queue = player.storage._shazhang_club_queue;
-					return queue && queue.length > 0;
-				},
-				async content(event, trigger, player) {
-					const remaining = player.storage._shazhang_club_queue.shift();
-					if (!Array.isArray(remaining) || !remaining.length) return;
-					for (const target of remaining) {
-						if (!target.isIn()) continue;
-						await applyShazhangSilent(target);
-					}
-				},
-			},
 			club_silent: {
-				charlotte: true,
-				mark: true,
-				marktext: "禁",
-				intro: { content: "无法使用非锁定技" },
-				forced: true,
-				popup: false,
-				group: ["shazhang_club_silent_cleanup", "shazhang_club_silent_intercept"],
-			},
-			club_silent_cleanup: {
+				init(player, skill) {
+					player.addSkillBlocker(skill);
+				},
+				onremove(player, skill) {
+					player.removeSkillBlocker(skill);
+				},
 				trigger: { player: ["phaseAfter", "dieBegin"] },
 				forced: true,
 				popup: false,
-				filter(event, player) {
-					return player.storage._shazhang_club_silent === true;
-				},
 				content(event, trigger, player) {
-					delete player.storage._shazhang_club_silent;
-					const restore = player.storage._shazhang_club_restore;
-					if (restore && Array.isArray(restore)) {
-						for (const skill of restore) {
-							if (!player.hasSkill(skill)) player.addSkills(skill);
-						}
-					}
-					delete player.storage._shazhang_club_restore;
 					player.removeSkill("shazhang_club_silent");
 				},
-			},
-			club_silent_intercept: {
-				trigger: { player: "addSkillAfter" },
-				forced: true,
-				popup: false,
-				silent: true,
-				filter(event, player) {
-					if (player.storage._shazhang_club_silent !== true) return false;
-					const info = get.info(event.skill);
+				charlotte: true,
+				mark: true,
+				marktext: "禁",
+				intro: { content: "非锁定技失效" },
+				skillBlocker(skill, player) {
+					const info = get.info(skill);
 					if (!info) return false;
 					if (info.locked || info.forced || info.juexingji) return false;
 					return true;
-				},
-				content(event, trigger, player) {
-					const skillName = trigger.skill;
-					player.removeSkill(skillName);
-					if (!player.storage._shazhang_club_restore) player.storage._shazhang_club_restore = [];
-					if (!player.storage._shazhang_club_restore.includes(skillName)) {
-						player.storage._shazhang_club_restore.push(skillName);
-					}
 				},
 			},
 		},
@@ -1433,24 +1351,6 @@ const skill = {
 };
 
 async function applyShazhangSilent(target) {
-	const allSkills = target.getSkills(null, false);
-	const restore = [];
-	for (const skill of allSkills) {
-		const info = get.info(skill);
-		if (!info) continue;
-		if (info.locked || info.forced || info.juexingji) continue;
-		restore.push(skill);
-	}
-	for (const skill of restore) {
-		target.removeSkill(skill);
-	}
-	if (!target.storage._shazhang_club_restore) target.storage._shazhang_club_restore = [];
-	for (const skill of restore) {
-		if (!target.storage._shazhang_club_restore.includes(skill)) {
-			target.storage._shazhang_club_restore.push(skill);
-		}
-	}
-	target.storage._shazhang_club_silent = true;
 	target.addSkills("shazhang_club_silent");
 }
 
