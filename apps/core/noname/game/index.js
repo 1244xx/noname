@@ -166,9 +166,9 @@ export class Game {
 		}
 		if (filter !== false) {
 			if (list.length) {
-				for (const current of game.filterPlayer2()) {
+				game.countPlayer2(current => {
 					list.removeArray(get.nameList(current));
-				}
+				});
 			}
 			if (filter === undefined) {
 				_status.characterlist = list;
@@ -450,12 +450,11 @@ export class Game {
 			return Promise.resolve();
 		}
 
-		const elements = new Set(parentFrom.childNodes).union(new Set(parentTo.childNodes));
+		// @ts-expect-error childNodes是可迭代的
+		const elements = new Set(parentFrom.childNodes).union(parentTo.childNodes);
 
 		for (const element of elements) {
-			if (element instanceof HTMLElement) {
-				recordAsFirstPosition(element);
-			}
+			recordAsFirstPosition(element);
 		}
 
 		// 我们等待所有动画入队再更改节点结构喵
@@ -471,12 +470,11 @@ export class Game {
 		await new Promise(resolve => resolve(null));
 
 		// 然后是LAST喵，记录结束位置哦喵
-		const elements2 = new Set(parentFrom.childNodes).union(new Set(parentTo.childNodes));
+		// @ts-expect-error childNodes是可迭代的
+		const elements2 = new Set(parentFrom.childNodes).union(parentTo.childNodes);
 
 		for (const element of elements2) {
-			if (element instanceof HTMLElement) {
-				recordAsLastPosition(element);
-			}
+			recordAsLastPosition(element);
 		}
 
 		/**
@@ -1263,12 +1261,10 @@ export class Game {
 			const history = game.getGlobalHistory(key);
 			if (last) {
 				const lastIndex = history.indexOf(last);
-				history.forEach((event, index) => {
-					if (index > lastIndex) {
-						return false;
-					}
-					return filter(event);
-				});
+				for (let i = 0; i < history.length; i++) {
+					if (i > lastIndex) break;
+					filter(history[i]);
+				}
 			} else {
 				history.forEach(filter);
 			}
@@ -1889,45 +1885,37 @@ export class Game {
 		}
 	}
 	/**
-	 * 向所有联机客户端广播并执行指定函数。
-	 *
-	 * 注意：`func`函数体内不能引用函数块外的作用域（如外层局部变量或闭包变量），
-	 * 否则客户端无法找到对应变量；需要的数据应通过`args`显式传入。
-	 *
-	 * @template { any[] } TParams
-	 * @param { (...args: TParams) => any } func
-	 * @param { TParams } args
+	 * @template { (...args: any[]) => unknown } T
+	 * @param { T } func
+	 * @param { Parameters<T> } args
 	 * @returns { void }
 	 */
 	broadcast(func, ...args) {
 		if (!lib.node || !lib.node.clients || game.online) {
 			return;
 		}
-		for (const client of lib.node.clients) {
-			client.send(func, ...args);
+		for (var i = 0; i < lib.node.clients.length; i++) {
+			if (lib.node.clients[i].inited) {
+				lib.node.clients[i].send.apply(lib.node.clients[i], arguments);
+			}
 		}
 	}
 	/**
-	 * 向所有联机客户端广播并执行指定函数，同时在主机上执行相同函数。
-	 *
-	 * 注意：联机场景下传入的`func`会被发送到客户端执行，函数体内不能引用函数块外的作用域
-	 * （如外层局部变量或闭包变量），否则客户端无法找到对应变量；需要的数据应通过 `args` 显式传入。
-	 *
-	 * @template { any[] } TParams
-	 * @param { (...args: TParams) => any } func
-	 * @param { TParams } args
+	 * @template { (...args: any[]) => unknown } T
+	 * @param { T } func
+	 * @param { Parameters<T> } args
 	 * @returns { void }
 	 */
 	broadcastAll(func, ...args) {
 		if (game.online) {
 			return;
 		}
-		game.broadcast(func, ...args);
+		game.broadcast.apply(this, arguments);
 		if (typeof func == "string") {
 			func = lib.message.client[func];
 		}
 		if (typeof func == "function") {
-			func(...args);
+			func.apply(this, args);
 		}
 	}
 	syncState() {
@@ -6358,7 +6346,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
 	}
 	/**
 	 * @param { string } skill
-	 * @param { Player } [player]
+	 * @param { Player } player
 	 */
 	removeGlobalSkill(skill, player) {
 		const players = lib.skill.globalmap[skill];

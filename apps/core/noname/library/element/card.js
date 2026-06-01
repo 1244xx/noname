@@ -104,10 +104,6 @@ export class Card extends HTMLDivElement {
 	 */
 	isCard;
 	/**
-	 * @type { string | undefined }
-	 */
-	original;
-	/**
 	 * @type { string[] }
 	 * 卡牌“占用的装备栏”
 	 * TODO: 补充对应的typings
@@ -948,7 +944,7 @@ export class Card extends HTMLDivElement {
 	 * @returns {boolean} 是否包含class
 	 */
 	classListContainsAll() {
-		return Array.from(arguments).every(name => this.classList.contains(this.className));
+		return Array.from(arguments).every(name => this.classList.contains(name));
 	}
 	/**
 	 * 返回一个键值，用于在缓存中作为键名。
