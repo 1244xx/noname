@@ -1,5 +1,5 @@
 import { lib, game, ui, get, ai, _status } from "../../main/utils.js";
-import { getYitiList, getYitiBySubtype, STORAGE_KEY } from "../../card/yiti_skill.js";
+import { getYitiList, getYitiBySubtype, STORAGE_KEY, getAllYitiCards } from "../../card/yiti_skill.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skill = {
@@ -795,6 +795,7 @@ const skill = {
 			}
 
 			player.markSkill("_yiti_mark");
+			player.addSkill("jieli");
 		},
 		ai: {
 			order: 9,
@@ -850,15 +851,5 @@ const skill = {
 		},
 	},
 };
-
-function getAllYitiCards() {
-	const names = [];
-	for (const key in lib.card) {
-		if (lib.card[key].yiti === true) {
-			names.push(key);
-		}
-	}
-	return names;
-}
 
 export default skill;

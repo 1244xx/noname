@@ -438,6 +438,9 @@ export class Create {
 						bg.setBackgroundDB(img.slice(3));
 					} else if (typeof img == "string") {
 						bg.setBackgroundImage(img);
+						bg.style.backgroundSize = "contain";
+						bg.style.backgroundRepeat = "no-repeat";
+						bg.style.backgroundPosition = "center";
 					}
 					/*if (img.startsWith("ext:")) {
 						bg.setBackgroundImage(img.replace(/^ext:/, "extension/"));

@@ -1,6 +1,7 @@
 /** @type { importCharacterConfig['translate'] } */
 const translate = {
 	wa: "哇",
+	
 	huanxiangji: "还乡基",
 	dizu: "地租",
 	dizu_info: "锁定技，其他角色的出牌阶段结束时，若其身上没有标记烧和抢，则需交给你一张牌。",
@@ -14,8 +15,8 @@ const translate = {
 	qianglue_info: "获得目标一张牌，然后再弃置目标一张牌。",
 	shao_mark: "烧",
 	qiang_mark: "抢",
+	
 	tanglaoha: "唐老哈",
-	zhongchui: "重锤",
 	tuite: "推特",
 	tuite_info: "锁定技，你的♠牌均视为♥五谷丰登。",
 	gushi: "股市",
@@ -24,6 +25,7 @@ const translate = {
 	zhasi_info: "当你濒死时，可以减少1点体力上限，将体力回复到1点，然后获得弃牌堆一张黑桃牌。",
 	zhanshou: "斩首",
 	zhanshou_info: "主公技，回合开始阶段，你可以弃置一张五谷丰登并指定一名其他角色，直到你的下个回合开始阶段前，对其使用的杀无距离限制。",
+	
 	haxuefeng: "哈雪峰",
 	qiaole: "巧乐",
 	qiaole_info: "锁定技，你的♠牌离开手牌后，摸一张牌。",
@@ -31,6 +33,11 @@ const translate = {
 	changpao_info: "你的回合开始阶段或回合结束阶段，可以弃置一张点数为X的牌并选择一名角色，双方轮流判定（至多X次），率先判定杀的角色向对方使用之。判定X次或判定到杀后，你或对方可以废除结果并向对方重新发动技能长跑。",
 	feiqin: "废寝",
 	feiqin_info: "每轮限一次，你的回合结束后，可以翻开一张牌堆顶牌，若花色不为♠，你执行一个额外回合，否则你的体力扣至0。",
+
+	zhongchui: "重锤",
+	duge: "镀铬",
+	duge_info: "锁定技，游戏开始时，你废除所有装备栏，任选武器类义体一个以及其他类型义体各两个视为装备。",
+	
 };
 
 export default translate;

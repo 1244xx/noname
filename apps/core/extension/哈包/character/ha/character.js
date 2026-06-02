@@ -69,6 +69,6 @@ const character = {
 	},
 };
 for (let i in character) {
-	character[i].img = "extension/哈包/image/character/" + i + ".png";
+	character[i].img = "extension/哈包/image/character/ha/" + i + ".png";
 }
 export default character;

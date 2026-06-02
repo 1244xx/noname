@@ -1,4 +1,5 @@
 import { lib, game, ui, get, ai, _status } from "../../main/utils.js";
+import { getYitiList, getAllYitiCards, STORAGE_KEY } from "../../card/yiti_skill.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skill = {
@@ -518,6 +519,62 @@ const skill = {
 		ai: {
 			order: 9,
 			result: { player: 1 },
+		},
+	},
+
+	duge: {
+		forced: true,
+		locked: true,
+		trigger: { global: "gameStart" },
+		async content(event, trigger, player) {
+			player.logSkill("duge");
+			for (let i = 1; i <= 5; i++) {
+				player.disableEquip(i);
+			}
+			const allCards = getAllYitiCards();
+			const weapons = allCards.filter(n => lib.card[n].subtype === "equip1");
+			const armors = allCards.filter(n => lib.card[n].subtype === "equip2");
+			const horses = allCards.filter(n => lib.card[n].subtype === "equip3_4");
+			const treasures = allCards.filter(n => lib.card[n].subtype === "equip5");
+
+			async function chooseAndEquip(player, candidates, count, prompt) {
+				if (!candidates.length || count <= 0) return;
+				const map = candidates.map(n => [lib.card[n].cardcolor || "spade", lib.card[n].yitiNumber || 1, n]);
+				const result = await player.chooseButton([prompt, [map, "vcard"]], Math.min(count, map.length), true)
+					.set("ai", button => {
+						const info = lib.card[button.link[2]];
+						return info.ai?.basic?.equipValue || info.ai?.equipValue || 5;
+					})
+					.forResult();
+				if (result.bool && result.links) {
+					const list = getYitiList(player);
+					if (!player.storage[STORAGE_KEY]) player.storage[STORAGE_KEY] = list;
+					for (const link of result.links) {
+						const info = lib.card[link[2]];
+						const skills = info.skills ? info.skills.slice() : [];
+						list.push({
+							name: link[2],
+							subtype: info.subtype,
+							suit: info.cardcolor || "spade",
+							number: info.yitiNumber || 1,
+							skills: skills,
+						});
+						if (skills.length) {
+							player.addAdditionalSkill("_yiti_mark", skills, true);
+						}
+					}
+					player.markSkill("_yiti_mark");
+				}
+			}
+
+			await chooseAndEquip(player, weapons, 1, "镀铬：请选择一件武器类义体");
+			await chooseAndEquip(player, armors, 2, "镀铬：请选择两件防具类义体");
+			await chooseAndEquip(player, horses, 2, "镀铬：请选择两件坐骑类义体");
+			await chooseAndEquip(player, treasures, 2, "镀铬：请选择两件宝物类义体");
+		},
+		ai: {
+			order: 1,
+			result: { player: 5 },
 		},
 	},
 };

@@ -402,6 +402,9 @@ export class Card extends HTMLDivElement {
 					this.node.image.setBackgroundDB(img.slice(3));
 				} else if (typeof img == "string") {
 					this.node.image.setBackgroundImage(img);
+					this.node.image.style.backgroundSize = "contain";
+					this.node.image.style.backgroundRepeat = "no-repeat";
+					this.node.image.style.backgroundPosition = "center";
 				}
 				/*if (img.startsWith("ext:")) {
 					this.node.image.setBackgroundImage(img.replace(/^ext:/, "extension/"));

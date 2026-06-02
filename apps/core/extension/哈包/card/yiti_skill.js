@@ -79,9 +79,9 @@ const skill = {
 		async content(event, trigger, player) {
 			const card = event.cards[0];
 			const info = get.info(card);
-			const subtype = info.subtype;
 			const list = getYitiList(player);
-			const existing = list.find(i => i.subtype === subtype);
+			const matching = list.filter(i => i.subtype === info.subtype);
+			const existing = matching.length ? await _chooseYitiToReplace(player, matching) : null;
 			const isReplace = !!existing;
 			const needDiscard = isReplace ? 1 : 2;
 
@@ -107,17 +107,17 @@ const skill = {
 				const idx = list.indexOf(existing);
 				if (idx >= 0) list.splice(idx, 1);
 			} else {
-				if (subtype === "equip3_4") {
+				if (info.subtype === "equip3_4") {
 					player.disableEquip(3, 4);
 				} else {
-					player.disableEquip(subtype);
+					player.disableEquip(info.subtype);
 				}
 			}
 
 			const skills = info.skills ? info.skills.slice() : [];
 			list.push({
 				name: card.name,
-				subtype: subtype,
+				subtype: info.subtype,
 				suit: card.suit,
 				number: card.number,
 				skills: skills,
@@ -166,116 +166,6 @@ const skill = {
 			delete player.storage[STORAGE_KEY];
 		},
 	},
-
-	wangqu_skill1: {
-		locked: true,
-		forced: true,
-		trigger: { player: "useCardAfter" },
-		filter(event, player) {
-			return get.type2(event.card) === "trick";
-		},
-		async content(event, trigger, player) {
-			player.draw();
-		},
-		ai: {
-			combo: "trick",
-		},
-	},
-
-	wangqu_skill2: {
-		enable: "phaseUse",
-		usable: 1,
-		filterTarget(card, player, target) {
-			return target.countCards("h") === 0
-				|| target.getCards("h").every(c => get.is.shownCard(c));
-		},
-		async content(event, trigger, player) {
-			const { target } = event;
-			const result = await player
-				.chooseControl(["wangqu_loseHp", "wangqu_control"])
-				.set("prompt", `请选择对${get.translation(target)}的效果`)
-				.set("ai", () => {
-					const att = get.attitude(player, target);
-					if (att > 0) return "wangqu_control";
-					if (target.hp <= 1) return "wangqu_loseHp";
-					if (target.countCards("h") >= 4) return "wangqu_control";
-					return "wangqu_loseHp";
-				})
-				.forResult();
-			if (result.control === "wangqu_loseHp") {
-				await target.loseHp();
-			} else {
-				const hs = target.getCards("h");
-				if (hs.length) {
-					target.addGaintag(hs, "visible_wangqu");
-					player.markAuto("wangqu_control_shared", [target]);
-				}
-				player.storage.wangqu_control_target = target;
-			}
-			player.addTempSkill("wangqu_control_end", { player: "phaseJieshuAfter" });
-		},
-		ai: {
-			order: 9,
-			result: {
-				target(player, target) {
-					if (get.attitude(player, target) > 0) return 0;
-					return target.countCards("h") === 0 ? -1.5 : -1;
-				},
-			},
-		},
-	},
-
-	wangqu_control_end: {
-		charlotte: true,
-		trigger: { player: "phaseJieshu" },
-		forced: true,
-		popup: false,
-		async content(event, trigger, player) {
-			await player.chooseToDiscard("he", 2, "网驱：请弃置两张牌", true);
-		},
-	},
-
-	qilusi_skill1: {
-		mod: {
-			targetInRange(card, player, target, result) {
-				if (get.type2(card) === "trick") return true;
-			},
-		},
-		trigger: { player: "useCardAfter" },
-		filter(event, player) {
-			if (get.type2(event.card) !== "trick") return false;
-			if (player.countCards("he") < 1) return false;
-			return event.targets && event.targets.some(t => t !== player && t.countCards("h") > 0);
-		},
-		async content(event, trigger, player) {
-			const targets = trigger.targets.filter(t => t !== player && t.countCards("h") > 0);
-			if (!targets.length) return;
-
-			const target = targets.length === 1 ? targets[0] : (await player
-				.chooseTarget("义眼：请选择一名角色观看手牌", (card, player, t) => targets.includes(t))
-				.set("ai", t => -get.attitude(player, t) + (t.countCards("h") > 2 ? 1 : 0))
-				.forResult()).targets?.[0];
-			if (!target) return;
-
-			const cardToView = target.getCards("h").randomGet();
-			await player.viewCards("义眼：" + get.translation(target) + "的一张手牌", [cardToView]);
-
-			const discardResult = await player
-				.chooseToDiscard("he", "义眼：请弃置一张牌，令" + get.translation(target) + "弃置所有同花色的手牌")
-				.set("ai", card => {
-					const suit = get.suit(card, player);
-					return target.countCards("h", c => get.suit(c, target) === suit) - 3;
-				})
-				.forResult();
-			if (!discardResult.bool || !discardResult.cards?.length) return;
-
-			const discardedSuit = get.suit(discardResult.cards[0], player);
-			const matchingCards = target.getCards("h").filter(c => get.suit(c, target) === discardedSuit);
-			if (matchingCards.length) {
-				await target.discard(matchingCards);
-			}
-		},
-	},
 };
 
 function canEquipYiti(player, card) {
@@ -295,5 +185,71 @@ function _yiti_equip_filter(card, player) {
 	return get.info(card).yiti && canEquipYiti(player, card);
 }
 
-export { getYitiList, getYitiBySubtype, STORAGE_KEY };
+function getAllYitiCards() {
+	const names = [];
+	for (const key in lib.card) {
+		if (lib.card[key].yiti === true) {
+			names.push(key);
+		}
+	}
+	return names;
+}
+
+async function registerYitiEquip(player, yitiName, extra = {}) {
+	const info = lib.card[yitiName];
+	if (!info) return;
+	const subtype = info.subtype;
+	const list = getYitiList(player);
+	const matching = list.filter(i => i.subtype === subtype);
+	const existing = matching.length ? await _chooseYitiToReplace(player, matching) : null;
+	if (existing) {
+		for (const skill of existing.skills) {
+			player.removeAdditionalSkill("_yiti_mark", skill);
+		}
+		const oldCard = game.createCard2(existing.name, existing.suit, existing.number);
+		oldCard.fix();
+		ui.discardPile.appendChild(oldCard);
+		game.log(oldCard, "被置入了弃牌堆");
+		const idx = list.indexOf(existing);
+		if (idx >= 0) list.splice(idx, 1);
+	} else {
+		if (subtype === "equip3_4") {
+			player.disableEquip(3, 4);
+		} else {
+			player.disableEquip(subtype);
+		}
+	}
+	const suit = extra.suit || info.cardcolor || "spade";
+	const number = extra.number || info.yitiNumber || 1;
+	const skills = info.skills ? info.skills.slice() : [];
+	list.push({
+		name: yitiName,
+		subtype: subtype,
+		suit: suit,
+		number: number,
+		skills: skills,
+	});
+	player.storage[STORAGE_KEY] = list;
+	if (skills.length) {
+		player.addAdditionalSkill("_yiti_mark", skills, true);
+	}
+	player.markSkill("_yiti_mark");
+}
+
+async function _chooseYitiToReplace(player, matching) {
+	if (matching.length <= 1) return matching[0] || null;
+	const result = await player
+		.chooseButton(["请选择要替换掉的义体", [matching.map(i => [i.suit, i.number, i.name]), "vcard"]], true)
+		.set("ai", button => {
+			const item = matching.find(i => i.name === button.link[2]);
+			return item ? -(item.skills?.length || 0) : 0;
+		})
+		.forResult();
+	if (result.bool && result.links) {
+		return matching.find(i => i.name === result.links[0][2]) || null;
+	}
+	return matching[0];
+}
+
+export { getYitiList, getYitiBySubtype, STORAGE_KEY, getAllYitiCards, registerYitiEquip };
 export default skill;

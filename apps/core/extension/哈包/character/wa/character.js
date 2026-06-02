@@ -19,7 +19,7 @@ const character = {
 		hp: 1,
 		maxHp: 1,
 		hujia: 3,
-		skills: [],
+		skills: ["duge"],
 	},
 	haxuefeng: {
 		sex: "male",
@@ -29,6 +29,6 @@ const character = {
 	},
 };
 for (let i in character) {
-	character[i].img = "extension/哈包/image/character/" + i + ".png";
+	character[i].img = "extension/哈包/image/character/wa/" + i + ".png";
 }
 export default character;

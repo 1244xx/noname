@@ -2325,7 +2325,12 @@ const skill = {
 			if (result.control !== "是") return;
 			player.storage.youxian_round = game.roundNumber;
 			player.logSkill("youxian", target);
-			await player.showHandcards(get.translation(target) + "观看了" + get.translation(player) + "的手牌");
+			const handCards = player.getCards("h");
+			await target.chooseControl("确定").set("dialog", [
+				get.translation(target) + "观看了" + get.translation(player) + "的手牌",
+				handCards,
+				"forcebutton"
+			]).forResult();
 			const validNames = lib.inpile.filter(name => {
 				const vcard = get.autoViewAs({ name }, "unsure");
 				return get.filter(trigger.filterCard)(vcard, target, trigger);
