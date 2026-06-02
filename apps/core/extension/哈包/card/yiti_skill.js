@@ -15,6 +15,30 @@ const skill = {
 	_yiti_mark: {
 		forceLoad: true,
 		marktext: "体",
+		mod: {
+			globalFrom(from, to, distance) {
+				const list = getYitiList(from);
+				let delta = 0;
+				for (const item of list) {
+					const info = lib.card[item.name];
+					if (info && info.distance && typeof info.distance.globalFrom === "number") {
+						delta += info.distance.globalFrom;
+					}
+				}
+				return distance + delta;
+			},
+			attackFrom(from, to, range) {
+				const list = getYitiList(from);
+				let delta = 0;
+				for (const item of list) {
+					const info = lib.card[item.name];
+					if (info && info.distance && typeof info.distance.attackFrom === "number") {
+						delta += info.distance.attackFrom;
+					}
+				}
+				return range + delta;
+			},
+		},
 		intro: {
 			name: "义体",
 			markcount(storage, player) {
@@ -170,6 +194,8 @@ const skill = {
 
 function canEquipYiti(player, card) {
 	if (!card || !get.info(card).yiti) return false;
+	const blocked = player.storage.zhuangzhi_jiansuo_blocked || [];
+	if (blocked.includes(card.name)) return false;
 	const subtype = get.subtype(card);
 	const existing = getYitiBySubtype(player, subtype);
 	if (existing) {

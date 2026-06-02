@@ -662,8 +662,7 @@ const skill = {
 			const { control: slot } = await player
 				.chooseToDisable(true)
 				.set("prompt", "铬化：请废除一种装备栏")
-				.set("ai", event => {
-					const list = event._controls || [];
+				.set("ai", function (event, player, list) {
 					if (list.includes("equip2")) return "equip2";
 					if (list.includes("equip5")) return "equip5";
 					return list.randomGet();
@@ -727,7 +726,10 @@ const skill = {
 		ai: {
 			order: 8,
 			result: {
-				player: 2,
+				player(player) {
+					if (player.countCards("h") <= 2) return 0;
+					return 1;
+				},
 			},
 		},
 	},

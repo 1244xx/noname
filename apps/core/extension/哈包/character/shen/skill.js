@@ -34,7 +34,6 @@ const skill = {
 		locked: true,
 		init(player) {
 			player.storage.xunji_x = 0;
-			player.storage.xunji_drawed = false;
 			player.storage.xunji_out = true;
 		},
 		mod: {
@@ -47,13 +46,9 @@ const skill = {
 		},
 		trigger: {
 			player: ["useCard", "respond"],
-			global: ["dieEnd", "equip", "loseEquip", "phaseBegin"],
+			global: ["dieEnd", "equip", "loseEquip", "phaseBegin", "phaseBeginStart"],
 		},
 		filter(event, player) {
-			if (event.name === "phase") {
-				player.storage.xunji_drawed = false;
-				return false;
-			}
 			if (event.name === "useCard" || event.name === "respond") {
 				return event.card;
 			}
@@ -86,8 +81,6 @@ const skill = {
 				} else {
 					return;
 				}
-				if (player.storage.xunji_drawed === true) return;
-				player.storage.xunji_drawed = true;
 				await player.draw(2);
 			} else {
 				player.storage.xunji_out = true;

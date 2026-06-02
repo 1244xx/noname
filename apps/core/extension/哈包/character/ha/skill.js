@@ -2479,7 +2479,7 @@ const skill = {
 		charlotte: true,
 		trigger: { global: "phaseAfter" },
 		filter() {
-			return lib.skill.global.has("chujiang_effect");
+			return lib.skill.global.includes("chujiang_effect");
 		},
 		async content(event, trigger, player) {
 			game.removeGlobalSkill("chujiang_effect");

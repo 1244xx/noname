@@ -17,3 +17,6 @@ package-lock.json
 # Windows
 ehthumbs.db
 Thumbs.db
+
+# 哈包扩展 - 永不忽略
+!apps/core/extension/哈包/

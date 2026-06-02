@@ -66,7 +66,6 @@ export async function precontent(config, pack) {
 		const allCharacters = Object.assign({}, character, shenCharacter, waCharacter, wuCharacter);
 		const PACK_NAME = "哈包";
 
-		lib.characterPack[PACK_NAME] = allCharacters;
 		lib.translate[PACK_NAME + "_character_config"] = "哈包";
 
 		// 内部分组（如"神话再临"分"风林火山"）
@@ -80,18 +79,17 @@ export async function precontent(config, pack) {
 		lib.translate.haha_wa = "哇";
 		lib.translate.haha_wu = "呜";
 
-		// 首次安装默认启用武将包并注册武将
+		// 注册武将包（仅注册到可选列表，不强制启用）
 		if (!lib.config.characters) lib.config.characters = [];
 		if (!lib.config.all) lib.config.all = {};
 		if (!lib.config.all.characters) lib.config.all.characters = [];
 		if (!lib.config.all.characters.includes(PACK_NAME)) {
 			lib.config.all.characters.push(PACK_NAME);
 		}
-		if (!lib.config.characters.includes(PACK_NAME)) {
-			lib.config.characters.push(PACK_NAME);
-			game.saveConfig("characters", lib.config.characters);
+		if (lib.config.characters.includes(PACK_NAME)) {
+			lib.characterPack[PACK_NAME] = allCharacters;
+			Object.assign(lib.character, allCharacters);
 		}
-		Object.assign(lib.character, allCharacters);
 
 		// ==================== 卡牌：一个包，每张牌可单独禁用 ====================
 		const yitiCards = Object.assign({}, yitiWeaponCards, yitiArmorCards, yitiHorseCards, yitiTreasureCards);
@@ -116,16 +114,20 @@ export async function precontent(config, pack) {
 		}
 		lib.cardPile[PACK_NAME] = pileEntries;
 
-		// 首次安装默认启用卡牌包
+		// 注册卡牌包（仅注册到可选列表，不强制启用）
 		if (!lib.config.cards) lib.config.cards = [];
 		if (!lib.config.all) lib.config.all = {};
 		if (!lib.config.all.cards) lib.config.all.cards = [];
 		if (!lib.config.all.cards.includes(PACK_NAME)) {
 			lib.config.all.cards.push(PACK_NAME);
 		}
-		if (!lib.config.cards.includes(PACK_NAME)) {
-			lib.config.cards.push(PACK_NAME);
-			game.saveConfig("cards", lib.config.cards);
+
+		// 清理旧牌堆条目（每次 precontent 执行时先移除，再由下面的逻辑按配置决定是否加回）
+		const yitiNames = new Set(Object.keys(yitiCards));
+		for (let i = lib.card.list.length - 1; i >= 0; i--) {
+			if (yitiNames.has(lib.card.list[i][2])) {
+				lib.card.list.splice(i, 1);
+			}
 		}
 
 		// 根据 bannedpile 过滤，且仅在包启用时加入牌堆
