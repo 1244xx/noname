@@ -28,8 +28,8 @@ const character = {
 	hazhentian: {
 		sex: "female",
 		group: "wu",
-		hp: 5,
-		skills: [],
+		hp: 1,
+		skills: ["gehua", "chaoxian", "jieli"],
 	},
 };
 for (let i in character) {

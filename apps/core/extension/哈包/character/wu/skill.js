@@ -1,4 +1,5 @@
 import { lib, game, ui, get, ai, _status } from "../../main/utils.js";
+import { getYitiList, getYitiBySubtype, STORAGE_KEY } from "../../card/yiti_skill.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skill = {
@@ -650,6 +651,214 @@ const skill = {
 			result: { player: 2 },
 		},
 	},
+
+	gehua: {
+		enable: "phaseUse",
+		filter(event, player) {
+			if (player.countCards("h") < 2) return false;
+			return player.hasEnabledSlot(1) || player.hasEnabledSlot(2) || player.hasEnabledSlot(5) || player.hasEnabledSlot("horse");
+		},
+		async content(event, trigger, player) {
+			const { control: slot } = await player
+				.chooseToDisable(true)
+				.set("prompt", "铬化：请废除一种装备栏")
+				.set("ai", event => {
+					const list = event._controls || [];
+					if (list.includes("equip2")) return "equip2";
+					if (list.includes("equip5")) return "equip5";
+					return list.randomGet();
+				})
+				.forResult();
+			if (!slot) return;
+
+			const discardResult = await player
+				.chooseToDiscard("h", 2, "铬化：请弃置两张手牌", true)
+				.forResult();
+			if (!discardResult.bool) return;
+
+			const allYiti = getAllYitiCards();
+			const isMount = slot === "equip3_4";
+			const matchingYiti = allYiti.filter(n => {
+				const info = lib.card[n];
+				const list = getYitiList(player);
+				const match = isMount
+					? (info.subtype === "equip3_4")
+					: info.subtype === slot;
+				return match && !list.some(i => i.subtype === info.subtype);
+			});
+			if (!matchingYiti.length) return;
+
+			const yitiResult = await player
+				.chooseButton(["铬化：请选择一件要装备的义体", [matchingYiti.map(n => [lib.card[n].cardcolor || "spade", lib.card[n].yitiNumber || 1, n]), "vcard"]], true)
+				.set("ai", button => {
+					const info = lib.card[button.link[2]];
+					return info.ai?.basic?.equipValue || info.ai?.equipValue || 5;
+				})
+				.forResult();
+			if (!yitiResult.bool || !yitiResult.links?.length) return;
+			const yitiName = yitiResult.links[0][2];
+
+			const cardDef = lib.card[yitiName];
+			const subtype = cardDef.subtype;
+			if (isMount) {
+				await player.disableEquip(3, 4);
+			} else {
+				const num = parseInt(slot.slice(5));
+				await player.disableEquip(num);
+			}
+
+			const skills = cardDef.skills ? cardDef.skills.slice() : [];
+			const list = getYitiList(player);
+			list.push({
+				name: yitiName,
+				subtype: subtype,
+				suit: cardDef.cardcolor || "spade",
+				number: cardDef.yitiNumber || 1,
+				skills: skills,
+			});
+			player.storage[STORAGE_KEY] = list;
+
+			if (skills.length) {
+				player.addAdditionalSkill("_yiti_mark", skills, true);
+			}
+
+			player.markSkill("_yiti_mark");
+		},
+		ai: {
+			order: 8,
+			result: {
+				player: 2,
+			},
+		},
+	},
+	chaoxian: {
+		enable: "phaseUse",
+		filter(event, player) {
+			let slotCount = 0;
+			for (let i = 1; i <= 5; i++) {
+				if (player.hasEnabledSlot(i)) slotCount++;
+			}
+			if (slotCount > 0) return false;
+			if (player.countCards("he") < 1) return false;
+			if (player.maxHp < 3) return false;
+			const allYiti = getAllYitiCards();
+			const list = getYitiList(player);
+			const nonWeapon = allYiti.filter(n => {
+				const info = lib.card[n];
+				return info.subtype !== "equip1" && !list.some(i => i.name === n);
+			});
+			return nonWeapon.length > 0;
+		},
+		async content(event, trigger, player) {
+			const discardResult = await player
+				.chooseToDiscard("he", "超限：请弃置一张牌", true)
+				.forResult();
+			if (!discardResult.bool) {
+				event.finish();
+				return;
+			}
+
+			await player.loseMaxHp(2);
+
+			const allYiti = getAllYitiCards();
+			const list = getYitiList(player);
+			const nonWeapon = allYiti.filter(n => {
+				const info = lib.card[n];
+				return info.subtype !== "equip1" && !list.some(i => i.name === n);
+			});
+			if (!nonWeapon.length) return;
+
+			const yitiResult = await player
+				.chooseButton(["超限：请选择一件要装备的义体", [nonWeapon.map(n => [lib.card[n].cardcolor || "spade", lib.card[n].yitiNumber || 1, n]), "vcard"]], true)
+				.set("ai", button => {
+					const info = lib.card[button.link[2]];
+					return info.ai?.basic?.equipValue || info.ai?.equipValue || 5;
+				})
+				.forResult();
+			if (!yitiResult.bool || !yitiResult.links?.length) return;
+			const yitiName = yitiResult.links[0][2];
+
+			const cardDef = lib.card[yitiName];
+			const subtype = cardDef.subtype;
+			const skills = cardDef.skills ? cardDef.skills.slice() : [];
+			list.push({
+				name: yitiName,
+				subtype: subtype,
+				suit: cardDef.cardcolor || "spade",
+				number: cardDef.yitiNumber || 1,
+				skills: skills,
+			});
+			player.storage[STORAGE_KEY] = list;
+
+			if (skills.length) {
+				player.addAdditionalSkill("_yiti_mark", skills, true);
+			}
+
+			player.markSkill("_yiti_mark");
+		},
+		ai: {
+			order: 9,
+			result: {
+				player: 2.5,
+			},
+		},
+	},
+	jieli: {
+		locked: true,
+		forced: true,
+		trigger: { player: "useCard" },
+		filter(event, player) {
+			return event.targets && event.targets.length === 1 && event.targets[0] !== player;
+		},
+		async content(event, trigger, player) {
+			let X;
+			await player.judge(card => { X = get.number(card); return 0; }).forResult();
+			if (typeof X !== "number") return;
+			const Y = player.maxHp;
+			if (!(X > 3 * Y - 2)) return;
+
+			player.logSkill("jieli");
+
+			const players = game.players.filter(p => p.isIn());
+			const srcIndex = players.indexOf(player);
+			const newIndex = (srcIndex + X) % players.length;
+			const newTarget = players[newIndex];
+
+			trigger.targets[0] = newTarget;
+			player.storage._jieli_boost_target = newTarget;
+
+			game.log(player, "发动解离，将", get.translation(trigger.card), "的目标改为", get.translation(newTarget), "(X=" + X + ")");
+		},
+		group: ["jieli_damage"],
+		subSkill: {
+			damage: {
+				locked: true,
+				forced: true,
+				trigger: { source: "damageBegin" },
+				filter(event, player) {
+					return event.source === player && event.player === player.storage._jieli_boost_target;
+				},
+				async content(event, trigger, player) {
+					trigger.num++;
+					delete player.storage._jieli_boost_target;
+					game.log(player, "发动解离，伤害+1");
+				},
+			},
+		},
+		ai: {
+			threaten: 1.5,
+		},
+	},
 };
+
+function getAllYitiCards() {
+	const names = [];
+	for (const key in lib.card) {
+		if (lib.card[key].yiti === true) {
+			names.push(key);
+		}
+	}
+	return names;
+}
 
 export default skill;

@@ -2598,15 +2598,17 @@ const skill = {
 					return event.num < 0 && player.storage.liudao_skills && player.storage.liudao_skills.length > 0;
 				},
 				content(event, trigger, player) {
-					const removed = player.storage.liudao_skills.pop();
-					if (removed && player.hasSkill(removed)) {
-						player.removeSkill(removed);
+					const count = Math.min(Math.abs(trigger.num), player.storage.liudao_skills.length);
+					for (let i = 0; i < count; i++) {
+						const removed = player.storage.liudao_skills.pop();
+						if (removed && player.hasSkill(removed)) {
+							player.removeSkill(removed);
+						}
 					}
 				},
 			},
 		},
 	},
-
 	lunhui: {
 		audio: 2,
 		mark: true,
@@ -2632,7 +2634,6 @@ const skill = {
 			},
 		},
 	},
-
 	liudao_xiayi: {
 		audio: 2,
 		frequent: true,
@@ -2668,7 +2669,6 @@ const skill = {
 			result: { player: 2 },
 		},
 	},
-
 	liudao_zhengpai: {
 		audio: 2,
 		frequent: true,
@@ -2701,7 +2701,6 @@ const skill = {
 			result: { player: 2 },
 		},
 	},
-
 	liudao_shuangbo: {
 		audio: 2,
 		frequent: true,
@@ -2746,7 +2745,6 @@ const skill = {
 			result: { player: 1 },
 		},
 	},
-
 	liudao_qinwu: {
 		audio: 2,
 		frequent: true,
@@ -2817,7 +2815,6 @@ const skill = {
 			result: { player: 1 },
 		},
 	},
-
 	liudao_bubai: {
 		audio: 2,
 		frequent: true,
@@ -2881,7 +2878,6 @@ const skill = {
 			result: { player: 1.5 },
 		},
 	},
-
 	liudao_bubai_damage: {
 		charlotte: true,
 		trigger: { source: "damageBegin1" },
@@ -2898,7 +2894,6 @@ const skill = {
 			damageBonus: true,
 		},
 	},
-
 	liudao_zongheng: {
 		audio: 2,
 		enable: "phaseUse",
