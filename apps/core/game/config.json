@@ -210,7 +210,7 @@
 	"connect_characters": ["diy"],
 	"connect_cards": ["huodong", "guozhan", "sp", "zhulu", "yingbian", "yongjian", "xianxia"],
 	"plays": [],
-	"extensions": [],
+	"extensions": ["哈包"],
 	"banned": [],
 	"bannedcards": [],
 	"forbidlist": [],
