@@ -1,0 +1,48 @@
+[
+  {
+    "module": "kobe.js",
+    "local_helpers": [
+      "currentCore",
+      "currentGame",
+      "currentGet",
+      "currentStatus",
+      "getPlayers",
+      "hasDistanceOneTarget",
+      "inOwnPhase",
+      "readDistance",
+      "readNumber"
+    ],
+    "issues": [
+      {
+        "line": 281,
+        "risk_start_line": 257,
+        "helper": "currentCore",
+        "code": "var runtimeLib = globalThis.lib || lib || (currentCore() && currentCore().lib);"
+      }
+    ]
+  },
+  {
+    "module": "zhuluan.js",
+    "local_helpers": [
+      "canUseHuangyiCard",
+      "dumpHuangyiDebug",
+      "hasRedHand",
+      "huangyiCardInfo",
+      "mergeRuntimeLib",
+      "resolveFengzhaoTarget",
+      "runtimeGet",
+      "runtimeLib",
+      "safeAttitude",
+      "safeColor",
+      "safeTranslation"
+    ],
+    "issues": [
+      {
+        "line": 559,
+        "risk_start_line": 516,
+        "helper": "mergeRuntimeLib",
+        "code": "mergeRuntimeLib(globalThis.lib || lib || null, zhuluanModule);"
+      }
+    ]
+  }
+]

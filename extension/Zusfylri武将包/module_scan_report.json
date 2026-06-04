@@ -1,0 +1,382 @@
+[
+  {
+    "module": "beimingzhanjia.js",
+    "characters": [
+      "zus_beimingzhanjia"
+    ],
+    "sort": [
+      "zus_beimingzhanjia"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "change.js",
+    "characters": [
+      "zus_change"
+    ],
+    "sort": [
+      "zus_change"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "chiyou.js",
+    "characters": [
+      "zus_chiyou"
+    ],
+    "sort": [
+      "zus_chiyou"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "dingzhen.js",
+    "characters": [
+      "zus_dingzhen"
+    ],
+    "sort": [
+      "zus_dingzhen"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "gazi.js",
+    "characters": [
+      "zus_gazi"
+    ],
+    "sort": [
+      "zus_gazi"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "hongxiuquan.js",
+    "characters": [
+      "zus_hongxiuquan"
+    ],
+    "sort": [
+      "zus_hongxiuquan"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "hongyu.js",
+    "characters": [
+      "zus_hongyu"
+    ],
+    "sort": [
+      "zus_hongyu"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "houyi.js",
+    "characters": [
+      "zus_houyi"
+    ],
+    "sort": [
+      "zus_houyi"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "huaxiaofeng.js",
+    "characters": [
+      "zus_huaxiaofeng"
+    ],
+    "sort": [
+      "zus_huaxiaofeng"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "jichang.js",
+    "characters": [
+      "zus_jichang"
+    ],
+    "sort": [
+      "zus_jichang"
+    ],
+    "hp_issues": [
+      {
+        "charid": "zus_jichang",
+        "hp": "\"3/6\""
+      }
+    ],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "jingyou.js",
+    "characters": [
+      "zus_jingyou"
+    ],
+    "sort": [
+      "zus_jingyou"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "kobe.js",
+    "characters": [
+      "zus_kobe"
+    ],
+    "sort": [
+      "zus_kobe"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "langyan.js",
+    "characters": [],
+    "sort": [
+      "zus_langyan"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": [],
+    "sort_mismatch": [
+      "zus_langyan"
+    ]
+  },
+  {
+    "module": "lier.js",
+    "characters": [
+      "zus_lier"
+    ],
+    "sort": [
+      "zus_lier"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "mabaoguo.js",
+    "characters": [
+      "zus_mabaoguo"
+    ],
+    "sort": [
+      "zus_mabaoguo"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "makesi_kongfuzi.js",
+    "characters": [
+      "zus_makesi_kongfuzi"
+    ],
+    "sort": [
+      "zus_makesi_kongfuzi"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "mo.js",
+    "characters": [
+      "zus_mo"
+    ],
+    "sort": [
+      "zus_mo"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": [
+      "game.zusMoGetXingyanCardByLink"
+    ]
+  },
+  {
+    "module": "ningji.js",
+    "characters": [
+      "zus_ningji"
+    ],
+    "sort": [
+      "zus_ningji"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "qing.js",
+    "characters": [
+      "zus_qing"
+    ],
+    "sort": [
+      "zus_qing"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "shanshang.js",
+    "characters": [
+      "zus_shanshang"
+    ],
+    "sort": [
+      "zus_shanshang"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "simayi.js",
+    "characters": [
+      "zus_simayi"
+    ],
+    "sort": [
+      "zus_simayi"
+    ],
+    "hp_issues": [
+      {
+        "charid": "zus_simayi",
+        "hp": "\"3/4\""
+      }
+    ],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "wei.js",
+    "characters": [
+      "zus_wei"
+    ],
+    "sort": [
+      "zus_wei"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "wujing.js",
+    "characters": [
+      "zus_wujing"
+    ],
+    "sort": [
+      "zus_wujing"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "xiangqing.js",
+    "characters": [
+      "zus_xiangqing"
+    ],
+    "sort": [
+      "zus_xiangqing"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "yingzheng.js",
+    "characters": [
+      "zus_yingzheng"
+    ],
+    "sort": [
+      "zus_yingzheng"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "yuanhou.js",
+    "characters": [
+      "zus_yuanhou"
+    ],
+    "sort": [
+      "zus_yuanhou"
+    ],
+    "hp_issues": [
+      {
+        "charid": "zus_yuanhou",
+        "hp": "\"1/6\""
+      }
+    ],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "zhaoyun.js",
+    "characters": [
+      "zus_zhaoyun"
+    ],
+    "sort": [
+      "zus_zhaoyun"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "zhuangzhou.js",
+    "characters": [
+      "zus_zhuangzhou"
+    ],
+    "sort": [
+      "zus_zhuangzhou"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "zhuli.js",
+    "characters": [
+      "zus_zhuli"
+    ],
+    "sort": [
+      "zus_zhuli"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  },
+  {
+    "module": "zhuluan.js",
+    "characters": [
+      "zus_fengzhao_target",
+      "zus_fengzhao_target_id",
+      "zus_zhuluan"
+    ],
+    "sort": [
+      "zus_zhuluan"
+    ],
+    "hp_issues": [],
+    "top_var_access": [],
+    "global_func_access": []
+  }
+]
