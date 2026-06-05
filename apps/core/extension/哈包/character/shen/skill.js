@@ -380,6 +380,8 @@ const skill = {
 		},
 		ai: {
 			basic: { order: 1, useful: 0 },
+			order: 1,
+			result: { target: -1 },
 		},
 	},
 
@@ -387,7 +389,8 @@ const skill = {
 		trigger: { player: "phaseUseBegin", global: "phaseUseBegin" },
 		filter(event, player) {
 			if (event.player === player) return player.countCards("h") > 0 && game.hasPlayer(target => target !== player && target.countCards("h") > 0);
-			return player.countCards("h") > 0;
+			// 仅对敌方角色触发被动划拳，不对队友使用
+			return player.countCards("h") > 0 && get.attitude(player, event.player) < 0;
 		},
 		async content(event, trigger, player) {
 			let target;
@@ -409,7 +412,11 @@ const skill = {
 		},
 		ai: {
 			order: 6,
-			result: { target: 1 },
+			result: {
+				target(player, target) {
+					return get.attitude(player, target) < 0 ? 1 : 0;
+				},
+			},
 		},
 	},
 	hankuang: {
@@ -513,7 +520,14 @@ const skill = {
 		},
 		ai: {
 			order: 7,
-			result: { player: 1 },
+			result: {
+				player(player) {
+					const trigger = _status.event.getTrigger();
+					// 仅在被敌人攻击时用划拳反制
+					if (trigger && trigger.player && get.attitude(player, trigger.player) < 0) return 1.5;
+					return 0;
+				},
+			},
 		},
 	},
 
@@ -713,7 +727,13 @@ const skill = {
 		},
 		ai: {
 			order: 6,
-			result: { target: -1 },
+			result: {
+				target(player, target) {
+					// 仅对敌方发动划拳，禁杀效果
+					if (get.attitude(player, target) < 0) return -1.5;
+					return 0;
+				},
+			},
 		},
 	},
 	feiyu: {
@@ -775,6 +795,7 @@ const skill = {
 			result: { player: 1 },
 		},
 	},
+	
 	gongfang: {
 		frequent: true,
 		trigger: {

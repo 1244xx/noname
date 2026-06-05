@@ -20,6 +20,9 @@ const skill = {
 
 	fu_xinzang_skill: {
 		trigger: { player: "dying" },
+		ai: {
+			maixie: true,
+		},
 		filter(event, player) {
 			return !player.storage.fu_xinzang_used;
 		},
@@ -126,6 +129,9 @@ const skill = {
 	tengtong_zhihuan_skill: {
 		locked: true,
 		forced: true,
+		ai: {
+			maixie: true,
+		},
 		trigger: { player: ["damageBegin", "changeHp"] },
 		filter(event, player) {
 			if (event.name === "changeHp") return event.num < 0;
@@ -175,6 +181,17 @@ const skill = {
 		async content(event, trigger, player) {
 			await player.turnOver();
 			player.addTempSkill("guangxue_micai_stealth", { player: "turnOver" });
+		},
+		ai: {
+			order: 8,
+			result: {
+				player(player) {
+					// 血量低或手牌少时翻面保命
+					if (player.hp <= 1 && player.countCards("h") <= 2) return 3;
+					if (player.hp <= 2) return 2;
+					return 1;
+				},
+			},
 		},
 	},
 

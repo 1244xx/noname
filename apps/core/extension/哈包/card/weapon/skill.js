@@ -25,6 +25,9 @@ const skill = {
 		forced: true,
 		locked: true,
 		firstDo: true,
+		ai: {
+			halfneg: true,
+		},
 		filter(event, player) {
 			return event.card.name == "sha" && event.targets && event.targets.length > 0;
 		},

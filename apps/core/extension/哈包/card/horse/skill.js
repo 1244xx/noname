@@ -105,6 +105,9 @@ const skill = {
 
 	fanying_tiaoxieqi_skill: {
 		trigger: { player: "chooseToRespondBegin" },
+		ai: {
+			maixie: true,
+		},
 		filter(event, player) {
 			if (player.hp >= 2) return false;
 			return event.respondName === "shan" || event.respondSkill?.viewAs?.name === "shan";
