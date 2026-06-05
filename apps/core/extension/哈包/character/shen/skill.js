@@ -23,7 +23,10 @@ const skill = {
 			effect: {
 				player(card, player, target) {
 					if (card.name == "sha") {
-						return [1, 0, 0, 0];
+						const li = player.storage.gangren_li || 0;
+						if (li > 0) return [0, 0, 0, 2];
+						if (target.hp <= 1) return [1, 0, 0, 0];
+						return [0, 0, 0.5, 0];
 					}
 				},
 			},
@@ -35,6 +38,7 @@ const skill = {
 		init(player) {
 			player.storage.xunji_x = 0;
 			player.storage.xunji_out = true;
+			player.storage.xunji_draw_round = 0;
 		},
 		mod: {
 			globalFrom(from, to, distance) {
@@ -45,12 +49,15 @@ const skill = {
 			},
 		},
 		trigger: {
-			player: ["useCard", "respond"],
+			player: ["useCard", "respond", "discard"],
 			global: ["dieEnd", "equip", "loseEquip", "phaseBegin", "phaseBeginStart"],
 		},
 		filter(event, player) {
 			if (event.name === "useCard" || event.name === "respond") {
 				return event.card;
+			}
+			if (event.name === "discard") {
+				return event.cards && event.cards.length > 0;
 			}
 			return true;
 		},
@@ -71,13 +78,31 @@ const skill = {
 				}
 				player.syncStorage("xunji_x");
 				player.updateMarks();
+			} else if (trigger.name === "discard") {
+				const cards = trigger.cards;
+				for (const card of cards) {
+					const color = get.color(card);
+					if (color === "black") {
+						player.storage.xunji_x--;
+					} else if (color === "red") {
+						player.storage.xunji_x++;
+					}
+				}
+				if (player.storage.xunji_x < -2) {
+					player.storage.xunji_x = -2;
+				} else if (player.storage.xunji_x > 2) {
+					player.storage.xunji_x = 2;
+				}
+				player.syncStorage("xunji_x");
+				player.updateMarks();
 			}
 			const otherPlayers = game.players.filter(p => p !== player && p.isIn());
 			if (otherPlayers.length === 0) return;
 			const allOutOfRange = otherPlayers.every(other => !other.inRange(player));
 			if (allOutOfRange) {
-				if (player.storage.xunji_out === true) {
+				if (player.storage.xunji_out === true && player.storage.xunji_draw_round !== game.roundNumber) {
 					player.storage.xunji_out = false;
+					player.storage.xunji_draw_round = game.roundNumber;
 				} else {
 					return;
 				}
@@ -128,12 +153,20 @@ const skill = {
 		ai: {
 			order: 5,
 			expose: 0.3,
+			result: {
+				player(player) {
+					if (player.hasCards("he") && (player.storage.gangren_li || 0) < 2) {
+						return 2;
+					}
+					return 0;
+				},
+			},
 			effect: {
-				target(card, player, target) {
+				player(card, player, target) {
 					if (card.name === "sha") {
 						const li = player.storage.gangren_li || 0;
-						if (li > 0) return [2, 0, 0, 0];
-						return [-1, 0, 0, 0];
+						if (li > 0) return [0, 0, 0, 2];
+						return [0, 0, 1, 0];
 					}
 				},
 			},
@@ -141,29 +174,37 @@ const skill = {
 		group: ["gangren_damage"],
 	},
 	gangren_damage: {
-		trigger: { player: "useCard" },
+		trigger: { player: "useCard", source: "damageBegin3" },
 		forced: true,
-		filter(event, player) {
-			return event.card && event.card.name === "sha";
+		filter(event, player, name) {
+			if (name === "useCard") return event.card && event.card.name === "sha";
+			if (name === "damageBegin3") return player.storage._gangren_lower > 0;
 		},
 		async content(event, trigger, player) {
-			const liCount = player.storage.gangren_li || 0;
-			if (liCount > 0) {
-				const result = await player.chooseControl(["弃置标记", "不弃置"])
-					.set("prompt", `钢刃：你有${liCount}枚利标记，是否弃置一枚使此杀伤害+1？（不弃置则伤害-1）`)
-					.forResult();
-				if (result.control === "弃置标记") {
-					player.storage.gangren_li--;
-					player.syncStorage("gangren_li");
-					player.updateMarks();
-					trigger.baseDamage += 1;
-					return;
+			if (event.triggername === "useCard") {
+				const liCount = player.storage.gangren_li || 0;
+				if (liCount > 0) {
+					const result = await player.chooseControl(["弃置标记", "不弃置"])
+						.set("prompt", `钢刃：你有${liCount}枚利标记，是否弃置一枚使此杀伤害+1？（不弃置则伤害-1并弃置目标一张牌）`)
+						.set("ai", () => "弃置标记")
+						.forResult();
+					if (result.control === "弃置标记") {
+						player.storage.gangren_li--;
+						player.syncStorage("gangren_li");
+						player.updateMarks();
+						trigger.baseDamage = (trigger.baseDamage || 1) + 1;
+						return;
+					}
 				}
-			}
-			if (trigger.baseDamage === 1) {
-				trigger.cancel();
-			} else {
-				trigger.baseDamage -= 1;
+				player.storage._gangren_lower = trigger.targets.length;
+				for (const target of trigger.targets) {
+					if (target && target.isIn() && target.countCards("he") > 0) {
+						await player.discardPlayerCard(target, "he", true);
+					}
+				}
+			} else if (event.triggername === "damageBegin3") {
+				player.storage._gangren_lower--;
+				trigger.num = Math.max(0, trigger.num - 1);
 			}
 		},
 	},
@@ -253,15 +294,19 @@ const skill = {
 					delete shanUser.storage._huaquan_forced_shan;
 					shanUser.removeSkill("huaquan_forced_shan");
 
-					game.log(shanUser, "使用扣置闪响应了", shaUser, "的杀");
+					if (get.position(shanCard) === "h") {
+						shanUser.loseToDiscardpile([shanCard]);
+						game.log(shanUser, "的扣置闪未使用，弃置之");
+					} else {
+						game.log(shanUser, "使用扣置闪响应了", shaUser, "的杀");
+					}
 				}
 			} else {
 				const pCard = hq.playerCard;
 				const tCard = hq.targetCard;
-				const pCardCopy = { name: pCard.name, suit: pCard.suit, number: pCard.number };
-				const tCardCopy = { name: tCard.name, suit: tCard.suit, number: tCard.number };
 
-				game.log(player, "翻开了扣置的", pCardCopy);
+				await player.gain([pCard], "nodelay");
+				game.log(player, "翻开了扣置的", pCard);
 				const playerCanUse = pName === "sha" || player.canUse(pName, target, false);
 				if (playerCanUse) {
 					if (pName === "sha") {
@@ -271,17 +316,18 @@ const skill = {
 						game.log("浮风：", player, "的杀失效");
 					} else {
 						hq.cardsSet[0].used = true;
-						const useEvent = player.useCard(pCardCopy, [target], false);
+						const useEvent = player.useCard(pCard, [target], false);
 						if (pName === "sha" && tName !== "shan") useEvent.directHit = [target];
 						if (hq.damageBonus && pName === "sha") useEvent.baseDamage = (useEvent.baseDamage || 1) + 1;
 						await useEvent;
 					}
 				} else {
-					game.log(player, "的扣置牌", pCardCopy, "无法对", target, "使用");
+					game.log(player, "的扣置牌", pCard, "无法对", target, "使用");
 					hq._playerUnusable = true;
 				}
 
-				game.log(target, "翻开了扣置的", tCardCopy);
+				await target.gain([tCard], "nodelay");
+				game.log(target, "翻开了扣置的", tCard);
 				const targetCanUse = tName === "sha" || target.canUse(tName, player, false);
 				if (targetCanUse) {
 					if (tName === "sha") {
@@ -291,16 +337,15 @@ const skill = {
 						game.log("浮风：", target, "的杀失效");
 					} else {
 						hq.cardsSet[1].used = true;
-						const useEvent = target.useCard(tCardCopy, [player], false);
+						const useEvent = target.useCard(tCard, [player], false);
 						if (tName === "sha" && pName !== "shan") useEvent.directHit = [player];
 						if (hq.damageBonus && tName === "sha") useEvent.baseDamage = (useEvent.baseDamage || 1) + 1;
 						await useEvent;
 					}
 				} else {
-					game.log(target, "的扣置牌", tCardCopy, "无法对", player, "使用");
+					game.log(target, "的扣置牌", tCard, "无法对", player, "使用");
 					hq._targetUnusable = true;
 				}
-
 			}
 
 			for (const fn of hq.onResolve) {
@@ -311,6 +356,8 @@ const skill = {
 			const tRest = hq.targetCard;
 			if (pRest && get.position(pRest) === "x") player.loseToDiscardpile([pRest]);
 			if (tRest && get.position(tRest) === "x") target.loseToDiscardpile([tRest]);
+			if (pRest && get.position(pRest) === "h") player.loseToDiscardpile([pRest]);
+			if (tRest && get.position(tRest) === "h") target.loseToDiscardpile([tRest]);
 
 			delete player.storage._huaquan_state;
 			delete target.storage._huaquan_state;
@@ -591,12 +638,12 @@ const skill = {
 			sha: {
 				charlotte: true,
 				trigger: { player: "useCard" },
+				round: 1,
 				filter(event, player) {
-					return event.card && event.card.name === "sha" && player.storage.niren_sha_round !== game.roundNumber;
+					return event.card && event.card.name === "sha";
 				},
 				forced: true,
 				async content(event, trigger, player) {
-					player.storage.niren_sha_round = game.roundNumber;
 					trigger.baseDamage = (trigger.baseDamage || 1) + 1;
 				},
 			},
@@ -606,7 +653,7 @@ const skill = {
 			damageBonus: true,
 			skillTagFilter(player, tag, arg) {
 				if (tag === "damageBonus") {
-					return arg && arg.card && arg.card.name === "sha" && player.storage.niren_sha_round !== game.roundNumber;
+					return arg && arg.card && arg.card.name === "sha";
 				}
 			},
 		},

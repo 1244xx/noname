@@ -16,7 +16,7 @@ const translate = {
 	tengtong_bianjiqi_info: "◆当你受到伤害时可以判定一次，若为黑色，获得一点护盾。",
 
 	tengtong_zhihuan: "疼痛置换",
-	tengtong_zhihuan_info: "◆<b>锁定技，</b>你的体力值扣减及后续结算统一延迟至下一个回合结束后继续。",
+	tengtong_zhihuan_info: "◆<b>锁定技，</b>你的体力值扣减延迟并转化为回合结束后失去体力。",
 
 	guangxue_micai: "光学迷彩",
 	guangxue_micai_info: "◆回合结束阶段，你可以将你的武将牌翻面，翻面期间无法成为其他角色的目标。",

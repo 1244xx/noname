@@ -9,10 +9,10 @@ const translate = {
 	xuanpi: "旋劈",
 	xuanpi_info: "锁定技，你的杀能且仅能指定任意名距离为1的其他角色。",
 	xunji: "迅疾",
-	xunji_info: "锁定技，你与其他角色相互计算距离时附加X，X∈[-2,+2]。你使用或打出黑色/红色牌结算后，X值-1/+1。你脱离其他所有角色攻击范围后摸两张牌。",
+	xunji_info: "锁定技，你与其他角色相互计算距离时附加X，X∈[-2,+2]。你使用、打出或弃置黑色/红色牌结算后，X值-1/+1。每回合限一次，你脱离其他所有角色攻击范围后摸两张牌。",
 	gangren: "钢刃",
 	gangren_damage: "钢刃",
-	gangren_info: "出牌阶段，你可以弃置一张牌并获得一枚<b><span style='color: #A40000'>利</span></b>标记。当你使用杀时，需弃置一枚<b><span style='color: #A40000'>利</span></b>令此杀<b><span style='color: #A40000'>伤害+1</span></b>，否则此杀伤害-1。",
+	gangren_info: "出牌阶段，你可以弃置一张牌并获得一枚<b><span style='color: #A40000'>利</span></b>标记。当你使用杀时，需弃置一枚<b><span style='color: #A40000'>利</span></b>令此杀<b><span style='color: #A40000'>伤害+1</span></b>，否则此杀伤害-1并弃置目标一张牌。",
 	
 	jianxin: "剑心",
 	niren: "逆刃",

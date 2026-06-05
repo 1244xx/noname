@@ -2291,9 +2291,9 @@ const skill = {
 	youxian: {
 		audio: 2,
 		frequent: true,
+		usable: 1,
 		trigger: { global: ["chooseToRespondBegin", "chooseToUseBegin"] },
 		filter(event, player, triggername) {
-			if (player.storage.youxian_round >= game.roundNumber) return false;
 			if (player.countCards("h") === 0) return false;
 			if (triggername === "chooseToUseBegin") {
 				if (event.player === player) return false;
@@ -2323,7 +2323,6 @@ const skill = {
 				return;
 			}
 			if (result.control !== "是") return;
-			player.storage.youxian_round = game.roundNumber;
 			player.logSkill("youxian", target);
 			const handCards = player.getCards("h");
 			await target.chooseControl("确定").set("dialog", [

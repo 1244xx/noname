@@ -148,7 +148,7 @@ const skill = {
 
 	tengtong_zhihuan_apply: {
 		charlotte: true,
-		trigger: { player: "phaseJieshuBegin" },
+		trigger: { global: "phaseJieshuBegin" },
 		forced: true,
 		popup: false,
 		async content(event, trigger, player) {
@@ -292,8 +292,8 @@ const skill = {
 	neicun_peiping_skill: {
 		trigger: { player: "loseAfter" },
 		firstDo: true,
+		round: 1,
 		filter(event, player) {
-			if (player.storage.neicun_peiping_round >= game.roundNumber) return false;
 			return !player.countCards("h") && event.hs && event.hs.length > 0;
 		},
 		async cost(event, trigger, player) {
@@ -303,24 +303,22 @@ const skill = {
 				.forResult();
 		},
 		async content(event, trigger, player) {
-			player.storage.neicun_peiping_round = game.roundNumber;
 			await player.draw(2);
 		},
 	},
 
 	zhineng_sharuan_skill: {
 		enable: "chooseToUse",
-		filterCard: false,
+		filterCard() {
+			return false;
+		},
 		selectCard: -1,
+		round: 1,
 		viewAs: { name: "wuxie" },
 		viewAsFilter(player) {
-			if (player.storage.zhineng_sharuan_round >= game.roundNumber) return false;
 			return true;
 		},
 		prompt: "每轮限一次，视为使用一张无懈可击",
-		async content(event, trigger, player) {
-			player.storage.zhineng_sharuan_round = game.roundNumber;
-		},
 		ai: {
 			order: 5,
 			expose: 0.2,

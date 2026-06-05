@@ -495,12 +495,12 @@ const skill = {
 	feiqin: {
 		audio: 2,
 		frequent: false,
+		round: 1,
 		trigger: { player: "phaseAfter" },
 		filter(event, player) {
-			return player.storage.feiqin_round !== game.roundNumber;
+			return true;
 		},
 		async content(event, trigger, player) {
-			player.storage.feiqin_round = game.roundNumber;
 			player.logSkill("feiqin");
 			const cards = get.cards(1);
 			if (!cards || !cards.length) return;
