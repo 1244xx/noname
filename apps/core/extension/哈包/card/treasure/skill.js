@@ -98,8 +98,9 @@ const skill = {
 			order: 9,
 			result: {
 				target(player, target) {
-					if (get.attitude(player, target) > 0) return 0;
-					return target.countCards("h") === 0 ? -1.5 : -1;
+					if (get.attitude(player, target) < 0) return -1.5;
+					// 对队友选控制也有代价（弃2牌），谨慎评估
+					return -0.5;
 				},
 			},
 		},
@@ -161,6 +162,9 @@ const skill = {
 		async content(event, trigger, player) {
 			player.draw();
 		},
+		ai: {
+			threaten: 1.2,
+		},
 	},
 
 	kuangbao_skill2: {
@@ -171,6 +175,20 @@ const skill = {
 		async content(event, trigger, player) {
 			player.storage.kuangbao_active = true;
 			player.addTempSkill("kuangbao_no_limit", { player: "phaseAfter" });
+		},
+		ai: {
+			order: 8,
+			result: {
+				player(player) {
+					// 血量太低不宜发动（可能结束阶段自杀）
+					if (player.hp <= 2) return 0;
+					// 手中至少2张杀才值得
+					const shaCount = player.countCards("h", "sha");
+					if (shaCount >= 3) return 3;
+					if (shaCount >= 2) return 1.5;
+					return 0;
+				},
+			},
 		},
 	},
 
@@ -211,6 +229,12 @@ const skill = {
 		async content(event, trigger, player) {
 			player.draw();
 		},
+		ai: {
+			respondShan: true,
+			skillTagFilter(player) {
+				return true;
+			},
+		},
 	},
 
 	sianweisi_tan_skill2: {
@@ -221,6 +245,16 @@ const skill = {
 		async content(event, trigger, player) {
 			player.storage.sianweisi_tan_active = true;
 			player.addTempSkill("sianweisi_tan_force", { player: "phaseAfter" });
+		},
+		ai: {
+			order: 7,
+			result: {
+				player(player) {
+					// 手中至少1张闪才值得激活，否则纯亏弃牌
+					if (player.countCards("h", "shan") >= 1) return 2;
+					return 0;
+				},
+			},
 		},
 	},
 

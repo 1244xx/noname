@@ -38,7 +38,7 @@ const skill = {
 		init(player) {
 			player.storage.xunji_x = 0;
 			player.storage.xunji_out = true;
-			player.storage.xunji_draw_round = 0;
+			player.storage.xunji_hidden = false;
 		},
 		mod: {
 			globalFrom(from, to, distance) {
@@ -50,7 +50,7 @@ const skill = {
 		},
 		trigger: {
 			player: ["useCard", "respond", "discard"],
-			global: ["dieEnd", "equip", "loseEquip", "phaseBegin", "phaseBeginStart"],
+			global: ["dieEnd", "equip", "loseEquip"],
 		},
 		filter(event, player) {
 			if (event.name === "useCard" || event.name === "respond") {
@@ -98,24 +98,42 @@ const skill = {
 			}
 			const otherPlayers = game.players.filter(p => p !== player && p.isIn());
 			if (otherPlayers.length === 0) return;
-			const allOutOfRange = otherPlayers.every(other => !other.inRange(player));
-			if (allOutOfRange) {
-				if (player.storage.xunji_out === true && player.storage.xunji_draw_round !== game.roundNumber) {
-					player.storage.xunji_out = false;
-					player.storage.xunji_draw_round = game.roundNumber;
-				} else {
-					return;
-				}
-				await player.draw(2);
-			} else {
+			const hidden = otherPlayers.every(other => !other.inRange(player));
+			player.storage.xunji_hidden = hidden;
+			if (!hidden) {
 				player.storage.xunji_out = true;
 			}
 		},
 		mark: true,
+		marktext: "迅",
 		intro: {
 			content(storage, player) {
 				const x = player.storage.xunji_x || 0;
-				return `当前X值为${x}（范围[-2,+2]）`;
+				const hidden = player.storage.xunji_hidden;
+				const status = hidden ? "脱离" : "在攻击范围内";
+				return `当前X值为${x}（范围[-2,+2]），${status}`;
+			},
+		},
+		group: ["xunji_draw"],
+		subSkill: {
+			xunji_draw: {
+				trigger: {
+					player: ["useCard", "respond", "discard"],
+					global: ["dieEnd", "equip", "loseEquip"],
+				},
+				usable: 1,
+				priority: -1,
+				filter(event, player) {
+					if (player.storage.xunji_out !== true) return false;
+					const otherPlayers = game.players.filter(p => p !== player && p.isIn());
+					if (otherPlayers.length === 0) return false;
+					return otherPlayers.every(other => !other.inRange(player));
+				},
+				forced: true,
+				async content(event, trigger, player) {
+					player.storage.xunji_out = false;
+					await player.draw(2);
+				},
 			},
 		},
 		ai: {
@@ -559,7 +577,8 @@ const skill = {
 		},
 		ai: {
 			order: 8,
-			result: { player: 1 },
+			result: { player: 0.5 },
+			halfneg: true,
 		},
 	},
 	mengbu: {
@@ -613,6 +632,7 @@ const skill = {
 			return !player.storage._huaquan_state &&
 				event.player !== player &&
 				event.player.isIn() &&
+				get.attitude(player, event.player) < 0 &&
 				event.targets && event.targets.includes(player) &&
 				player.countCards("h") > 0;
 		},
@@ -786,7 +806,7 @@ const skill = {
 						prompt: "飞御：你可使用一张杀",
 						selectCard: [1, 1],
 						addCount: false,
-					});
+					}).set("ai", () => get.effect(opponent, { name: "sha" }, feiyuOwner, feiyuOwner) > 0 ? 1 : 0);
 				}
 			});
 		},
@@ -795,7 +815,7 @@ const skill = {
 			result: { player: 1 },
 		},
 	},
-	
+
 	gongfang: {
 		frequent: true,
 		trigger: {
@@ -825,7 +845,18 @@ const skill = {
 			const result = await player
 				.chooseControl([hasHengdao ? "擎盾" : "横刀"], "cancel2")
 				.set("prompt", "攻防：是否切换第二技能？（当前为" + (hasHengdao ? "横刀" : "擎盾") + "）")
-				.set("ai", () => Math.random() < 0.3 ? (hasHengdao ? "擎盾" : "横刀") : "cancel2")
+				.set("ai", () => {
+					// 根据战斗阶段决定切换：进攻阶段用横刀（闪多），防守阶段用擎盾
+					if (hasHengdao) {
+						// 当前横刀，考虑切换擎盾：低血量/闪少时切
+						if (player.hp <= 2 || player.countCards("h", "shan") === 0) return "擎盾";
+						return "cancel2";
+					} else {
+						// 当前擎盾，考虑切换横刀：杀多时切
+						if (player.countCards("h", "sha") >= 2 && player.hujia > 0) return "横刀";
+						return "cancel2";
+					}
+				})
 				.forResult();
 			if (result.control !== "cancel2") {
 				player.logSkill("gongfang");
@@ -906,7 +937,7 @@ const skill = {
 					} else {
 						const result = await player
 							.chooseBool("横刀：你没有护盾，是否失去一点体力并令本回合使用转化牌造成的伤害+1？")
-							.set("ai", () => 0.5)
+							.set("ai", () => player.hp > 2 ? 1 : 0)
 							.forResult();
 						if (result.bool) {
 							player.logSkill("hengdao");
@@ -1040,7 +1071,7 @@ const skill = {
 							},
 							prompt: "擎盾：对" + get.translation(source) + "使用一张杀",
 							addCount: false,
-						});
+						}).set("ai", () => get.effect(source, { name: "sha" }, player, player) > 0 ? 1 : 0);
 					}
 				},
 			},
@@ -1105,6 +1136,10 @@ const skill = {
 					prompt: "游戏：是否使用一张杀（无距离限制）？若不使用则无法响应此杀",
 					addCount: false,
 				})
+				.set("ai", () => {
+					// 应该出杀回应，否则自身无法响应此杀（等于必中）
+					return get.effect(target, { name: "sha" }, player, target) > 0 ? 1 : 0;
+				})
 				.forResult();
 			if (!result.bool) {
 				if (!Array.isArray(trigger.directHit)) trigger.directHit = [];
@@ -1133,7 +1168,16 @@ const skill = {
 			const prompt = isDraw
 				? "睡觉：是否翻面并跳过回合，然后回复一点体力？"
 				: "睡觉：是否翻面并摸三张牌？";
-			const result = await player.chooseBool(prompt).set("logSkill", "shuijiao").forResult();
+			const result = await player.chooseBool(prompt).set("logSkill", "shuijiao").set("ai", () => {
+				if (isDraw) {
+					// 摸牌结束翻面+回血：低血量/低手牌时值得
+					if (player.isDamaged()) return 1;
+					return 0.5;
+				}
+				// 结束阶段翻面+摸3牌：手牌少时值得
+				if (player.countCards("h") <= 2) return 1;
+				return 0.3;
+			}).forResult();
 			if (!result.bool) return;
 			await player.turnOver();
 			if (isDraw) {

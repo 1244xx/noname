@@ -54,7 +54,10 @@ const skill = {
 								get.type(card) == "delay";
 					},
 					"请选择一张杀或锦囊牌交给" + get.translation(player)
-				).forResult();
+				).set("ai", card => {
+					// 敌方交出最低价值牌
+					return 6 - get.value(card);
+				}).forResult();
 				if (result?.bool) {
 					giveSuccess = true;
 				};
@@ -109,7 +112,10 @@ const skill = {
 						"he",
 						1,
 						"请选择一张牌交给" + get.translation(player)
-					).forResult();
+					).set("ai", card => {
+						// 敌方交出最低价值牌
+						return 6 - get.value(card);
+					}).forResult();
 					
 					if (!result?.bool) {
 						// 如果没有交出牌，则此杀不可被响应，锦囊不可被无懈可击
@@ -402,7 +408,11 @@ const skill = {
 			if (!baji) return;
 			const giveResult = await player.chooseToGive(baji, "h", "服从：请交给" + get.translation(baji) + "一张杀")
 				.set("filterCard", card => card.name === "sha")
-				.set("ai", card => get.value(card) < 5 ? 1 : 0)
+				.set("ai", card => {
+					// 巴基队友交低价值杀，敌方不交
+					if (get.attitude(player, baji) > 0) return 6 - get.value(card);
+					return -1;
+				})
 				.forResult();
 			if (!giveResult.bool) return;
 			baji.logSkill("fucong", player);
@@ -416,7 +426,15 @@ const skill = {
 		},
 		ai: {
 			order: 5,
-			result: { player: 1 },
+			result: {
+				player(player) {
+					const baji = game.filterPlayer(p => p.hasSkill("fucong") && p.isIn())[0];
+					if (!baji) return 0;
+					// 只有巴基的队友才值得给杀
+					if (get.attitude(player, baji) > 0) return 1;
+					return -1;
+				},
+			},
 		},
 	},
 	xiaohui: {
@@ -458,7 +476,15 @@ const skill = {
 		},
 		ai: {
 			order: 5,
-			result: { target: 1 },
+			result: {
+				target(player, target) {
+					// 小惠：给敌方交牌可封其杀，给队友交牌浪费
+					const att = get.attitude(player, target);
+					if (att < 0 && player.countCards("h", "sha") <= 1) return 1.5;
+					if (att < 0) return 1;
+					return 0;
+				},
+			},
 		},
 	},
 	zhishi: {
@@ -486,7 +512,7 @@ const skill = {
 					filterTarget: (card, p, t) => t === finalTarget,
 					prompt: "指使：请对" + get.translation(finalTarget) + "使用一张杀",
 					addCount: false,
-				}).forResult();
+				}).set("ai", () => 1).forResult();
 				if (useResult?.bool && player.countCards("he") > 0) {
 					await target.gainPlayerCard(player, "he", true);
 				}
@@ -498,7 +524,11 @@ const skill = {
 		},
 		ai: {
 			order: 6,
-			result: { target: 1 },
+			result: {
+				target(player, target) {
+					return get.attitude(player, target) < 0 ? 1 : 0;
+				},
+			},
 		},
 	},
 

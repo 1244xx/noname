@@ -268,7 +268,8 @@ const skill = {
 		},
 		ai: {
 			order: 5,
-			result: { player: 1 },
+			result: { player: 0.5 },
+			halfneg: true,
 		},
 	},
 	gushi: {
@@ -414,6 +415,7 @@ const skill = {
 			}
 			const targetResult = await player.chooseTarget("斩首：请指定一名其他角色（取消则不发动）")
 				.set("filterTarget", (card, p, target) => target !== p)
+				.set("ai", target => -get.attitude(player, target))
 				.forResult();
 			if (!targetResult.bool) {
 				event.result = { bool: false };
@@ -518,7 +520,15 @@ const skill = {
 		},
 		ai: {
 			order: 9,
-			result: { player: 1 },
+			result: {
+				player(player) {
+					// 有保命手段(桃/酒/濒死技能)或极高血量时才冒险
+					if (player.countCards("h", card => get.name(card) === "tao" || get.name(card) === "jiu") > 0) return 2;
+					if (player.hp >= 3) return 1;
+					return 0;
+				},
+			},
+			halfneg: true,
 		},
 	},
 
@@ -575,6 +585,7 @@ const skill = {
 		ai: {
 			order: 1,
 			result: { player: 5 },
+			halfneg: true,
 		},
 	},
 };

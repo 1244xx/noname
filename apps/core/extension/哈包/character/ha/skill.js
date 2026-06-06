@@ -142,6 +142,11 @@ const skill = {
 			return event.card && get.type(event.card) == "basic" && player.countCards("he") > 0;
 		},
 		// 技能效果内容
+		check(event, player) {
+			// 低频牌可以不触发，留杀牌给关键时机
+			if (event.triggername === "respondAfter") return true;
+			return true;
+		},
 		async content(event, trigger, player) {
 			// 让玩家选择一张手牌或装备区的牌进行重铸（可选，可取消）
 			const result = await player.chooseCard("he", "游击：选择一张牌进行重铸（取消则不发动）").set("ai", card => {
@@ -228,48 +233,6 @@ const skill = {
 					return 0.5; // 中立：轻微收益
 				}
 			},
-			chooseTarget: {
-				filter(card, player, target) {
-					return target.countCards('h') > 0;
-				},
-				select(target) {
-					const player = get.player();
-					const att = get.attitude(player, target);
-					// 优先选择敌人或中立角色
-					if (att < 0) return 10;
-					if (att === 0) return 5;
-					return 1; // 尽量避免对队友使用
-				}
-			},
-			chooseButton: {
-				filter(button, player) {
-					// 优先重铸高价值牌（对敌人）或低价值牌（对自己）
-					const card = button.link;
-					const target = get.event().target;
-					const att = get.attitude(player, target);
-					
-					if (att < 0) {
-						// 对敌人：重铸其高价值牌
-						return get.value(card, target) > 3;
-					} else {
-						// 对自己/队友：重铸低价值牌
-						return get.value(card, target) < 3;
-					}
-				},
-				check(button) {
-					const card = button.link;
-					const target = get.event().target;
-					const att = get.attitude(get.player(), target);
-					
-					if (att < 0) {
-						// 对敌人：价值越高越优先
-						return get.value(card, target);
-					} else {
-						// 对自己/队友：价值越低越优先
-						return 6 - get.value(card, target);
-					}
-				}
-			}
 		},
 	},
 	// 问答 - 觉醒技,当你的血量降到3以下时立即发动,从你开始依次选择一项:1、指定一名手牌数大于自己的角色,视为对其使用一张杀,并弃置其一张牌;2、指定一名手牌数不大于自己的角色,获得其一张牌。随后所有角色获得技能皮豆。若你为主公,可在自己回合开始阶段直接发动。
@@ -290,13 +253,11 @@ const skill = {
 			
 			// 血量降到3以下时强制觉醒
 			if (event.name === 'changeHp' && player.hp < 3) {
-				this.forced = true; // 强制觉醒
 				return true;
 			}
 			
-			// 主公在回合开始时可以主动觉醒
-			if (event.name === 'phase' && player.isZhu) {
-				this.forced = false; // 取消强制,允许觉醒
+			// 主公在回合开始阶段可以主动觉醒
+			if (event.name === 'phaseBegin' && player.isZhu) {
 				return true;
 			}
 			
@@ -312,14 +273,16 @@ const skill = {
 			// 辅助函数:执行选择
 			async function executeChoice(currentPlayer, optionIndex, greaterTargets, notGreaterTargets) {
 				if (optionIndex === 0 && greaterTargets.length > 0) {
-					// 选项1:指定手牌数大于自己的角色,视为对其使用杀,并弃置其一张牌
+					// 选项1:指定手牌数大于自己的角色,视为对其使用杀,并弃置其一张牌（只对敌方）
+					const enemyGreater = greaterTargets.filter(t => get.attitude(currentPlayer, t) < 0);
+					const available = enemyGreater.length > 0 ? enemyGreater : greaterTargets;
 					const targetResult = await currentPlayer.chooseTarget(
 						'问答:请选择一名手牌数大于你的角色',
 						1,
 						1,
 						true
 					).set('filterTarget', (card, player, target) => {
-						return greaterTargets.includes(target);
+						return available.includes(target);
 					}).set('ai', target => {
 						const sha = { name: 'sha', isCard: true };
 						return get.effect(target, sha, currentPlayer, currentPlayer);
@@ -341,16 +304,19 @@ const skill = {
 						}
 					}
 				} else if (optionIndex === 1 && notGreaterTargets.length > 0) {
-					// 选项2:指定手牌数不大于自己的角色,获得其一张牌
+					// 选项2:指定手牌数不大于自己的角色,获得其一张牌（只对敌方）
+					const enemyNotGreater = notGreaterTargets.filter(t => get.attitude(currentPlayer, t) < 0);
+					if (enemyNotGreater.length === 0) return; // 无敌方目标则不发动
 					const targetResult = await currentPlayer.chooseTarget(
 						'问答:请选择一名手牌数不大于你的角色',
 						1,
 						1,
 						true
 					).set('filterTarget', (card, player, target) => {
-						return notGreaterTargets.includes(target);
+						return enemyNotGreater.includes(target);
 					}).set('ai', target => {
-						return get.attitude(currentPlayer, target);
+						// 优先选择手牌/装备多的敌人
+						return -(get.attitude(currentPlayer, target)) + target.countCards('he');
 					}).forResult();
 					
 					if (targetResult.bool && targetResult.targets && targetResult.targets.length > 0) {
@@ -404,6 +370,11 @@ const skill = {
 					const result = await currentPlayer.chooseControl(...choiceList.map((_, i) => `选项${i + 1}`))
 						.set('prompt', '问答:请选择一项')
 						.set('choiceList', choiceList)
+						.set('ai', () => {
+							// 选项1优先：杀+弃牌优于拿牌，且是否存在敌方大于手牌的目标
+							if (greaterTargets.some(t => get.attitude(currentPlayer, t) < 0)) return 0; // 选选项1
+							return 1; // 选选项2
+						})
 						.forResult();
 					const optionIndex = result.control === '选项1' ? 0 : 1;
 					await executeChoice(currentPlayer, optionIndex, greaterTargets, notGreaterTargets);
@@ -437,51 +408,6 @@ const skill = {
 				return Math.max(0.1, threat);
 			},
 			maixie: true,
-			// 选项选择AI
-			chooseControl: {
-				check(control, player) {
-					const event = get.event();
-					const greaterTargets = event.greaterTargets || [];
-					const notGreaterTargets = event.notGreaterTargets || [];
-					
-					// 评估选项1的收益（杀+弃牌）
-					let option1Value = 0;
-					if (greaterTargets.length > 0) {
-						option1Value = greaterTargets.reduce((sum, t) => {
-							const att = get.attitude(player, t);
-							if (att < 0) {
-								// 对敌人：杀+弃牌是高收益
-								return sum + 2.5;
-							}
-							return sum - 1; // 对队友是负收益
-						}, 0) / greaterTargets.length;
-					}
-					
-					// 评估选项2的收益（获得牌）
-					let option2Value = 0;
-					if (notGreaterTargets.length > 0) {
-						option2Value = notGreaterTargets.reduce((sum, t) => {
-							const att = get.attitude(player, t);
-							const cardValue = t.countCards('he') * 0.8; // 预估牌价值
-							if (att < 0) {
-								// 从敌人获得牌：高收益
-								return sum + cardValue + 1;
-							} else if (att > 0) {
-								// 从队友获得牌：中等收益（团队增益）
-								return sum + cardValue * 0.6;
-							}
-							return sum + cardValue * 0.8;
-						}, 0) / notGreaterTargets.length;
-					}
-					
-					// 比较两个选项
-					if (control === '选项1') {
-						return option1Value - option2Value;
-					} else {
-						return option2Value - option1Value;
-					}
-				}
-			}
 		}
 	},
 	// 皮豆 - 出牌阶段限一次，指定任意一名玩家博弈，声明该角色所有红色/黑色牌点数总和更大，失败的角色失去一点体力并可以立即使用一次肃纪，因皮豆而陷入濒死的角色回复一点体力。
@@ -497,7 +423,26 @@ const skill = {
 			player.logSkill("pidou", target);
 			
 			// 询问玩家选择红色还是黑色
-			const colorResult = await player.chooseControl(["red", "black"]).set("prompt", "皮豆：请选择声明的颜色").forResult();
+			const colorResult = await player.chooseControl(["red", "black"])
+				.set("prompt", "皮豆：请选择声明的颜色")
+				.set("ai", () => {
+					const cards = target.getCards("he");
+					let redSum = 0, blackSum = 0;
+					cards.forEach(card => {
+						const num = get.number(card) || 0;
+						if (get.color(card) === 'red') redSum += num;
+						else blackSum += num;
+					});
+					const att = get.attitude(player, target);
+					if (att < 0) {
+						// 对敌人：选点数总和小的颜色，让自己更容易赢
+						return redSum <= blackSum ? 0 : 1;
+					} else {
+						// 对队友：选点数总和大的颜色，让队友更容易赢
+						return redSum >= blackSum ? 0 : 1;
+					}
+				})
+				.forResult();
 			const chosenColor = colorResult.control;
 			
 			// 计算目标角色红/黑牌的点数总和
@@ -537,7 +482,9 @@ const skill = {
 				// 失败者失去一点体力
 				await loser.loseHp();
 				// 失败者选择一名角色发动肃纪
-				const loserChooseTarget = await loser.chooseTarget("皮豆：请选择一名角色发动肃纪", true).forResult();
+				const loserChooseTarget = await loser.chooseTarget("皮豆：请选择一名角色发动肃纪", true)
+					.set("ai", target => -get.attitude(loser, target))
+					.forResult();
 				if (loserChooseTarget.bool && loserChooseTarget.targets && loserChooseTarget.targets.length > 0) {
 					await loser.useSkill('suji', loserChooseTarget.targets);
 				}
@@ -547,7 +494,9 @@ const skill = {
 				// 玩家失去一点体力
 				await loser.loseHp();
 				// 玩家选择一名角色发动肃纪
-				const loserChooseTarget = await loser.chooseTarget("皮豆：请选择一名角色发动肃纪", true).forResult();
+				const loserChooseTarget = await loser.chooseTarget("皮豆：请选择一名角色发动肃纪", true)
+					.set("ai", target => -get.attitude(loser, target))
+					.forResult();
 				if (loserChooseTarget.bool && loserChooseTarget.targets && loserChooseTarget.targets.length > 0) {
 					await loser.useSkill('suji', loserChooseTarget.targets);
 				}
@@ -560,10 +509,11 @@ const skill = {
 			order: 7,
 			result: {
 				target(player, target) {
-					// 综合评估目标
 					const att = get.attitude(player, target);
+					// 绝对不对队友使用博弈
+					if (att > 0) return -3;
 					
-					// 计算红黑牌分布
+					// 对敌人：评估成功率
 					const cards = target.getCards('he');
 					let redSum = 0, blackSum = 0;
 					cards.forEach(card => {
@@ -571,64 +521,15 @@ const skill = {
 						if (get.color(card) === 'red') redSum += num;
 						else blackSum += num;
 					});
-					
-					// 判断哪边点数更大
 					const maxSum = Math.max(redSum, blackSum);
 					const minSum = Math.min(redSum, blackSum);
 					const diff = maxSum - minSum;
-					
-					// 成功率评估
 					const successRate = diff > 0 ? 0.7 : 0.5;
 					
-					if (att < 0) {
-						// 对敌人：希望对方失败
-						// 如果点数差距大，成功率高，收益高
-						return successRate * 2.5;
-					} else if (att > 0) {
-						// 对队友：谨慎使用
-						// 如果成功率低，可能害了队友
-						return successRate < 0.6 ? -2 : 0.5;
-					}
-					
-					// 中立角色：看收益
+					if (att < 0) return successRate * 2.5;
 					return successRate * 1.5;
 				}
 			},
-			// 颜色选择AI
-			chooseControl: {
-				check(control, player) {
-					const event = get.event();
-					const target = event.target;
-					const cards = target.getCards('he');
-					
-					let redSum = 0, blackSum = 0;
-					cards.forEach(card => {
-						const num = get.number(card) || 0;
-						if (get.color(card) === 'red') redSum += num;
-						else blackSum += num;
-					});
-					
-					const att = get.attitude(player, target);
-					
-					if (control === 'red') {
-						// 选择红色
-						if (att < 0) {
-							// 对敌人：选择点数小的颜色，让对方容易输
-							return redSum < blackSum ? 2 : 0.5;
-						} else {
-							// 对队友：选择点数大的颜色，让自己容易赢
-							return redSum > blackSum ? 2 : 0.5;
-						}
-					} else {
-						// 选择黑色
-						if (att < 0) {
-							return blackSum < redSum ? 2 : 0.5;
-						} else {
-							return blackSum > redSum ? 2 : 0.5;
-						}
-					}
-				}
-			}
 		}
 	},
 	pidou_recover: {
@@ -901,7 +802,13 @@ const skill = {
 				const maxCanDiscard = Math.min(2 - totalDiscarded, other.countCards("he"));
 				const prompt = "群起（" + get.translation(lastCardName) + "）：是否自愿弃置" + (maxCanDiscard > 1 ? "1~" + maxCanDiscard : "1") + "张牌？（共已弃" + totalDiscarded + "张，还需" + (2 - totalDiscarded) + "张）";
 				
-				const boolResult = await other.chooseBool(prompt).forResult();
+				const boolResult = await other.chooseBool(prompt)
+					.set("ai", () => {
+						// 仅队友自愿弃牌帮助群起
+						if (get.attitude(other, player) > 0) return other.countCards("he", c => get.value(c) < 4) > 0 ? 1 : 0;
+						return 0;
+					})
+					.forResult();
 				if (!boolResult.bool) continue;
 				
 				let discardCount = 1;
@@ -909,6 +816,7 @@ const skill = {
 					const controlResult = await other.chooseControl()
 						.set("choiceList", ["弃置1张", "弃置2张"])
 						.set("prompt", prompt)
+						.set("ai", () => 0) // 选最少弃牌量
 						.forResult();
 					discardCount = controlResult.index === 0 ? 1 : 2;
 				}
@@ -1376,6 +1284,9 @@ const skill = {
 		async content(event, trigger, player) {
 			trigger.num--;
 		},
+		ai: {
+			neg: true,
+		},
 	},
 
 	mofo: {
@@ -1421,7 +1332,7 @@ const skill = {
 				} else {
 					const choice = await targetChar.chooseTarget("魔佛：请选择获得一名手牌最多玩家的手牌")
 						.set("filterTarget", (card, player, target) => maxPlayers.includes(target))
-						.set("ai", target => get.attitude(targetChar, target))
+						.set("ai", target => -get.attitude(targetChar, target))
 						.forResult();
 					if (!choice.bool || !choice.targets?.length) return;
 					stealTarget = choice.targets[0];
@@ -2248,7 +2159,7 @@ const skill = {
 					},
 					prompt: "基爆：请对" + get.translation(source) + "使用一张杀",
 					addCount: false,
-				}).forResult();
+				}).set("ai", () => get.effect(source, { name: "sha" }, player, player) > 0 ? 1 : 0).forResult();
 				return result?.bool;
 			};
 
@@ -2534,6 +2445,9 @@ const skill = {
 		audio: 2,
 		forced: true,
 		locked: true,
+		ai: {
+			halfneg: true,
+		},
 		mark: true,
 		marktext: "道",
 		intro: {
@@ -2783,9 +2697,15 @@ const skill = {
 				for (const volunteer of volunteers) {
 					const boolResult = await volunteer.chooseBool(
 						"勤务：是否自愿弃置一张手牌，令" + get.translation(player) + "视为再次使用" + get.translation(originalCard) + "？"
-					).forResult();
+					).set("ai", () => {
+						// 仅队友自愿帮助
+						if (get.attitude(volunteer, player) > 0 && volunteer.countCards("h", c => get.value(c) < 4) > 0) return 1;
+						return 0;
+					}).forResult();
 					if (boolResult.bool) {
-						const discardResult = await volunteer.chooseToDiscard("h", true, "勤务：请弃置一张手牌").forResult();
+						const discardResult = await volunteer.chooseToDiscard("h", true, "勤务：请弃置一张手牌")
+							.set("ai", card => 6 - get.value(card))
+							.forResult();
 						if (discardResult.bool) {
 							effective = true;
 							await doLiudaoReuseCard(player, originalCard);

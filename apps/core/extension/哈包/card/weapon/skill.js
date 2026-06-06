@@ -11,7 +11,7 @@ const skill = {
 			const target = trigger.targets[0];
 			event.result = await player
 				.chooseBool(`是否发动【单分子线】视为对${get.translation(target)}使用一张过河拆桥？`)
-				.set("ai", () => get.attitude(player, target) <= 0)
+				.set("ai", () => get.attitude(player, target) < 0)
 				.forResult();
 		},
 		async content(event, trigger, player) {
@@ -60,9 +60,10 @@ const skill = {
 				.chooseControl(choices)
 				.set("prompt", `是否发动【大猩猩手臂】令${get.translation(trigger.player)}本回合无法出牌？`)
 				.set("ai", () => {
+					if (get.attitude(player, trigger.player) >= 0) return choices.indexOf("cancel2");
 					if (player.hp <= 1 && player.hujia > 0) return choices.indexOf("失去1点护盾");
 					if (player.hujia > 0) return choices.indexOf("失去1点护盾");
-					if (get.attitude(player, trigger.player) < 0 && player.hp > 2) return choices.indexOf("失去1点体力");
+					if (player.hp > 2) return choices.indexOf("失去1点体力");
 					return choices.indexOf("cancel2");
 				})
 				.forResult();

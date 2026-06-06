@@ -31,7 +31,8 @@ const skill = {
 				.chooseToDiscard("he", "义眼：请弃置一张牌，令" + get.translation(target) + "弃置所有同花色的手牌")
 				.set("ai", card => {
 					const suit = get.suit(card, player);
-					return target.countCards("h", c => get.suit(c, target) === suit) - 3;
+					const matchCount = target.countCards("h", c => get.suit(c, target) === suit);
+					return matchCount - 3 - get.value(card) / 6;
 				})
 				.forResult();
 			if (!discardResult.bool || !discardResult.cards?.length) return;
@@ -70,7 +71,12 @@ const skill = {
 				.chooseControl(["mode3", "mode2", "cancel2"])
 				.set("prompt", `踝部加固：请选择距离模式（当前${currentMode === 3 ? "-3" : currentMode === 2 ? "-1和+2" : "-1"}）`)
 				.set("choiceList", ["-3（你计算与其他角色距离-3）", "-1和+2（你计算与其他角色距离-1，其他角色计算与你距离+2）"])
-				.set("ai", () => currentMode === 3 ? "mode2" : "mode3")
+				.set("ai", () => {
+					// 有多个敌人在近距离时用mode3进攻，否则用mode2防守
+					const enemyCount = game.countPlayer(current => get.attitude(player, current) < 0 && get.distance(player, current) <= 2);
+					if (enemyCount >= 2) return "mode3";
+					return currentMode === 3 ? "mode2" : "mode3";
+				})
 				.forResult();
 			if (result.control === "cancel2") return;
 			if (result.control === "mode3") {

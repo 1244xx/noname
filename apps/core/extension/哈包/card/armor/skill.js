@@ -16,6 +16,9 @@ const skill = {
 				return num + _getYitiCount(player);
 			},
 		},
+		ai: {
+			threaten: 0.8,
+		},
 	},
 
 	fu_xinzang_skill: {
@@ -34,15 +37,18 @@ const skill = {
 				choices.push("恢复" + i + "点体力");
 			}
 			choices.push("cancel2");
-			event.result = await player
+			const result = await player
 				.chooseControl(choices)
 				.set("prompt", "是否发动【副心脏】恢复体力？")
 				.set("ai", () => choices.indexOf("恢复" + maxRecover + "点体力"))
 				.forResult();
-			return event.result.control !== "cancel2";
+			event.result = {
+				bool: result.control !== "cancel2",
+				cost_data: { control: result.control },
+			};
 		},
 		async content(event, trigger, player) {
-			const choice = event.result.control;
+			const choice = event.cost_data.control;
 			const recoverCount = parseInt(choice.match(/\d+/)?.[0]) || 1;
 			await player.recover(recoverCount);
 			player.storage.fu_xinzang_used = true;
@@ -102,6 +108,9 @@ const skill = {
 		},
 		async content(event, trigger, player) {
 			await player.changeHujia(1);
+		},
+		ai: {
+			threaten: 0.6,
 		},
 	},
 
@@ -303,6 +312,9 @@ const skill = {
 		},
 		async content(event, trigger, player) {
 			trigger.num++;
+		},
+		ai: {
+			threaten: 0.4,
 		},
 	},
 
