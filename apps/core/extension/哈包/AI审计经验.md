@@ -239,6 +239,27 @@ async content(event, trigger, player) {
 - 修复：`event.result = { bool: result.control !== "cancel2", cost_data: { control: result.control } }`
 - content 读取：`event.cost_data.control`
 
+### 模式 M：`chooseToDisable` AI 签名错误导致无限循环
+`chooseToDisable(true).set("ai", event => { ... })` 中回调签名为 `(event, player, list)`，第三个参数 `list` 才是可选装备栏数组。错误地使用 `event._controls` 会得到 `undefined`，导致 AI 返回 `undefined` → 选不出结果 → 技能无限重试。
+
+- 修复：`.set("ai", function (event, player, list) { return list.randomGet(); })`
+
+### 模式 N：有代价技能的 `ai.result` 静态正值 = 无限循环
+```js
+ai: { result: { player: 2 } }  // ❌ 静态值
+```
+AI 每次扫描都看到正值，只要 `filter` 通过就会反复发动直到资源耗尽。对有弃牌/废装备栏等代价的技能必须改为动态函数：
+```js
+ai: { result: { player(player) { return player.countCards("h") > 2 ? 1 : 0; } } }
+```
+
+### 模式 O：`lib.skill.global.has()` 不存在
+全局技能管理的 `lib.skill.global` 是类数组对象，API 是 `.add()` / `.remove()` / `.includes()`。没有 `.has()` 方法，会导致 `TypeError`。
+
+- 修复：`lib.skill.global.has("x")` → `lib.skill.global.includes("x")`
+
+
+
 ---
 
 ## 六、实战数据：五轮审计 49 个问题分类
