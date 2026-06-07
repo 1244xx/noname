@@ -200,7 +200,7 @@ const skill = {
 			const selfCard = selfResult.cards[0];
 			
 			const targetResult = await player
-				.choosePlayerCard(target, "hej")
+				.choosePlayerCard(target, "hej", "visible")
 				.set("prompt2", `巧手：请选择${get.translation(target)}区域的一张牌进行调换`)
 				.set("ai", card => {
 					if (!card || !get.info(card)) return 0;
@@ -350,6 +350,15 @@ const skill = {
 				await target.discard(allCards);
 			}
 			
+			// 清除目标所有状态：标记、存储、技能
+			for (const mark of Object.keys(target.marks)) {
+				target.unmarkSkill(mark);
+			}
+			target.storage = {};
+			for (const skill of [...target.skills]) {
+				target.removeSkill(skill);
+			}
+			
 			const allCharacters = Object.keys(lib.character).filter(name => {
 				const info = lib.character[name];
 				if (!info || typeof info !== "object") return false;
@@ -363,12 +372,6 @@ const skill = {
 			const newChar = allCharacters.randomGet();
 			const newInfo = lib.character[newChar];
 			const oldName = target.name;
-			
-			// 手动移除旧技能（reinit 内部用的是 info[3] 数组下标，不兼容对象格式的角色数据）
-			const oldInfo = lib.character[oldName];
-			if (oldInfo?.skills) {
-				for (const s of oldInfo.skills) target.removeSkill(s);
-			}
 			
 			await target.reinit(oldName, newChar, null, true);
 			

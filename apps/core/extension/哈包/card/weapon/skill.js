@@ -70,6 +70,7 @@ const skill = {
 			return event.result.control !== "cancel2";
 		},
 		async content(event, trigger, player) {
+			if (!event.result) return;
 			const choice = event.result.control;
 			if (choice === "失去1点护盾") {
 				await player.changeHujia(-1);

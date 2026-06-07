@@ -1,3 +1,5 @@
+import { get } from "../../main/utils.js";
+
 /** @type { importCharacterConfig['translate'] } */
 const translate = {
 	wuwu: "呜",
@@ -37,7 +39,7 @@ const translate = {
 	gehua: "铬化",
 	gehua_info: "出牌阶段，你可以废除一种装备栏并弃置两张手牌，然后选择一件对应义体视为装备。",
 	chaoxian: "超限",
-	chaoxian_info: "出牌阶段，若你没有装备栏，你可以弃置一张牌并减少两点体力上限，任选一件非武器类未装备的义体视为装备，然后获得技能“解离”。",
+	chaoxian_info: `出牌阶段，若你没有装备栏，你可以弃置一张牌并减少两点体力上限，任选一件非武器类未装备的义体视为装备，然后获得技能${get.poptip("jieli")}。`,
 	jieli: "解离",
 	jieli_info: "锁定技，你指定单一目标时需判定一次，若X大于3Y-2，目标改为从你往后第X位且造成伤害时+1。（X为判定牌点数，Y为你的体力上限）",
 };

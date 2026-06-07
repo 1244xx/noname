@@ -86,6 +86,12 @@ export async function precontent(config, pack) {
 		lib.translate.haha_ya = "呀";
 		lib.translate.haha_wu = "呜";
 
+		// 势力色：哈→蜀(soil/红) 呜→魏(water/蓝) 哇→吴(wood/绿) 呀→群(qun/黄)
+		lib.groupnature.ha = "soil";
+		lib.groupnature.wuwu = "water";
+		lib.groupnature.wa = "wood";
+		lib.groupnature.ya = "qun";
+
 		// 注册武将包（仅注册到可选列表，不强制启用）
 		if (!lib.config.characters) lib.config.characters = [];
 		if (!lib.config.all) lib.config.all = {};

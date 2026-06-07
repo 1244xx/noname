@@ -818,6 +818,7 @@ const skill = {
 
 	gongfang: {
 		frequent: true,
+		derivation: ["hengdao", "qingdun"],
 		trigger: {
 			global: "gameStart",
 			player: ["useCardAfter", "respondAfter"],

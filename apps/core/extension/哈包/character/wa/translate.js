@@ -1,3 +1,5 @@
+import { get } from "../../main/utils.js";
+
 /** @type { importCharacterConfig['translate'] } */
 const translate = {
 	wa: "哇",
@@ -8,7 +10,7 @@ const translate = {
 	daosuan: "倒算",
 	daosuan_shao: "倒算",
 	daosuan_qiang: "倒算",
-	daosuan_info: "锁定技，你的回合外，对你用过杀或造成伤害的角色获得标记烧，弃置或获得你的牌的角色获得标记抢。你的准备阶段根据每名角色拥有的标记发动相应技能，并移除对应标记：烧：对其发动烧杀（视为对目标使用一张火杀，此杀不可响应。）；抢：对其发动抢掠（获得目标一张牌，然后再弃置目标一张牌。）。",
+	daosuan_info: `锁定技，你的回合外，对你用过杀或造成伤害的角色获得标记烧，弃置或获得你的牌的角色获得标记抢。你的准备阶段，对带烧标记的角色发动${get.poptip("shaosha")}，对带抢标记的角色发动${get.poptip("qianglue")}，并移除对应标记。`,
 	shaosha: "烧杀",
 	shaosha_info: "视为对目标使用一张火杀，此杀不可响应。",
 	qianglue: "抢掠",

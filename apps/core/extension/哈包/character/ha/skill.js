@@ -242,6 +242,7 @@ const skill = {
 		animationColor: "fire",         // 火焰色觉醒动画
 		juexingji: true,                // 官方觉醒技标记
 		forced: true,                  // 非强制发动(主公可选择,但掉血时强制)
+		derivation: ["pidou"],
 		trigger: {
 			player: ["changeHp", "phaseBegin"],  // 监听血量变化和回合开始两个事件
 		},
@@ -1144,6 +1145,7 @@ const skill = {
 		audio: 2,
 		forced: true,
 		locked: true,
+		derivation: ["yangliu", "chiyin", "sangong"],
 		trigger: { player: "useCardToBefore" },
 		filter(event, player) {
 			return event.card && event.card.name === "sha" && event.targets && event.targets.length > 0;
@@ -1292,6 +1294,7 @@ const skill = {
 	mofo: {
 		audio: 2,
 		frequent: true,
+		derivation: ["luanxia", "wuyi"],
 		trigger: { global: ["useCardToTargeted", "damageBegin1"] },
 		filter(event, player) {
 			if (player.storage.mofo_triggered) return false;
@@ -1434,6 +1437,7 @@ const skill = {
 	},
 	wuyi: {
 		audio: 2,
+		derivation: ["miaodu"],
 		marktext: "毒",
 		intro: {
 			markcount: "expansion",
@@ -1859,6 +1863,7 @@ const skill = {
 		audio: 2,
 		forced: true,
 		locked: true,
+		derivation: ["lianji", "danji"],
 		trigger: { player: "phaseZhunbeiBegin" },
 		async content(event, trigger, player) {
 			player.removeSkill("lianji");
@@ -2078,6 +2083,7 @@ const skill = {
 		animationColor: "fire",
 		juexingji: true,
 		forced: true,
+		derivation: ["jibao"],
 		trigger: {
 			player: "changeHp",
 		},
@@ -2445,6 +2451,7 @@ const skill = {
 		audio: 2,
 		forced: true,
 		locked: true,
+		derivation: ["liuxia_faq"],
 		ai: {
 			halfneg: true,
 		},

@@ -1,3 +1,5 @@
+import { get } from "../../main/utils.js";
+
 /** @type { importCharacterConfig['translate'] } */
 const translate = {
 	shen: "神",
@@ -40,7 +42,7 @@ const translate = {
 	
 	daodun: "刀盾",
 	gongfang: "攻防",
-	gongfang_info: "游戏开始时，以及你使用或打出杀、闪结算后，可切换第二技能为横刀或擎盾，若如此做，你摸一张牌。",
+	gongfang_info: `游戏开始时，以及你使用或打出杀、闪结算后，可切换第二技能为${get.poptip("hengdao")}或${get.poptip("qingdun")}，若如此做，你摸一张牌。`,
 	hengdao: "横刀",
 	hengdao_info: "摸牌阶段，你可以清空护盾并多摸两倍数量的牌，若你没有护盾则改为失去一点体力然后令你本回合使用转化牌造成的伤害+1。你可以将闪当杀、杀当闪、桃当决斗使用或打出，若如此做，摸一张牌。",
 	qingdun: "擎盾",

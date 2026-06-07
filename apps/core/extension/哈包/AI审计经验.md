@@ -344,3 +344,29 @@ ai: {
 第三轮：grep "get.attitude" → 逐回调走查三个场景 / grep "ai.chooseControl.check" → 确认 get.event() 上下文
 第四轮：按技能效果分类 → 对照标签表 → 逐项补齐
 ```
+
+---
+
+## 七、展示层审计问题模式（新增）
+
+### 模式 W：derivation 指向 `_faq` → 角色卡不显示绿色按钮
+
+`click/index.js:4270` 有 `if (skill.indexOf("_faq") != -1) continue`，所有 `_faq` 条目在角色卡绿色按钮生成阶段被过滤。`derivation` 指向 `_faq` 条目时，在角色卡技能栏看不到衍生技。
+
+修复：`derivation` 必须指向 `lib.skill` 中存在的真实技能名。`_faq` 条目仅用作详情面板的聚合展示。
+
+### 模式 X：扩展 translate.js 使用 `get.poptip()` 但未 import
+
+标准包 translate.js 有 `import { get } from "noname"`，扩展的没有。在模板字符串中 `${get.poptip("xxx")}` 是模块加载时求值，缺 import 直接报 `ReferenceError: get is not defined`。
+
+修复：在扩展 translate.js 顶部添加 `import { get } from "../../main/utils.js";`。
+
+### 模式 Y：技能描述中 `\n` 不换行
+
+`_info` 描述文本通过 `get.skillInfoTranslation` 处理时，`\n` 被当作普通字符。需要用 `<br>` 标签实现换行。
+
+### 模式 Z：`derivation` 数组中混入 subskill 名
+
+`derivation` 被展开为角色卡绿色按钮，指向的 skill 必须通过 `lib.translate[skill]` 和 `lib.translate[skill + "_info"]` 双重检查（L4266）。subskill 通常有翻译但没有独立的 `_info` → 被静默跳过。
+
+修复：确保 `derivation` 中每个名字都是顶级技能名，有翻译 + `_info`。

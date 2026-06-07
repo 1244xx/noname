@@ -41,6 +41,7 @@ const skill = {
 		audio: 2,
 		forced: true,
 		locked: true,
+		derivation: ["shaosha", "qianglue"],
 		group: ["daosuan_shao", "daosuan_qiang"],
 		trigger: {
 			player: "phaseZhunbeiBegin",

@@ -765,6 +765,7 @@ const skill = {
 	},
 	chaoxian: {
 		enable: "phaseUse",
+		derivation: ["jieli"],
 		filter(event, player) {
 			let slotCount = 0;
 			for (let i = 1; i <= 5; i++) {
