@@ -221,3 +221,52 @@ B 写法的陷阱：
 
 ### 模式 K：`result.target` 分正值可能误导 AI 选队友
 凡是从目标处获益的技能，`result.target` 应对队友为负或 0。
+
+### 模式 L：cost 的 chooseControl 结果未传 cost_data
+`cost` 中的 `chooseControl` 结果通过 `cost_data` 传递给 `content`，但常见写错：
+```js
+// ❌ cost 返回 event.result = chooseControl结果
+// content 中 event.result.control → undefined!
+async cost(event, trigger, player) {
+    event.result = await player.chooseControl(...).forResult();
+    return event.result.control !== "cancel2";
+},
+async content(event, trigger, player) {
+    event.result.control;  // ❌ cost 的 event 不是 content 的 event！
+}
+```
+- 审计方法：grep 所有 `async cost` + `chooseControl`，逐项确认是否用了 `cost_data` 传值
+- 修复：`event.result = { bool: result.control !== "cancel2", cost_data: { control: result.control } }`
+- content 读取：`event.cost_data.control`
+
+---
+
+## 六、实战数据：五轮审计 49 个问题分类
+
+以下为对哈包 8 个 `skill.js`（118 个技能）完整五轮审计的产出统计，可作为同类审计的"预期产出示意"：
+
+| 类别 | 数量 | 具体案例 |
+|------|------|----------|
+| chooseXXX 缺 `set("ai")` | 14 | qunqi/ludao_qinwu 志愿者、youxi、feiyu、qingdun、jibao、zhishi、chifan、皮豆 loser 肃纪 ×2、服从 give、威压 defense/offense 目标 give |
+| attitude 符号反向 | 6 | 魔佛偷牌 `+attitude`→选队友、皮豆博弈目标正分→选队友、网驱 result.target 队友 0、小惠 result 队友正分 |
+| `result` 常量应改为动态函数 | 6 | fucong_active、xiaohui、zhishi、pidou、wangqu_skill2、fucong give |
+| 标签缺失 | 8 | 废寝/镀铬/推特/消逝/禅眠 缺 `halfneg`、撒功缺 `neg`、斯安威斯坦1 缺 `respondShan`、斯安威斯坦2 缺 ai |
+| 无差别敌友 | 3 | wenda 选项2 偷队友、大猩猩手臂封队友、单分子线拆中立 |
+| 跨角色交互无 AI | 4 | qunqi 志愿者 chooseBool/chooseControl、liudao_qinwu 志愿者 chooseBool/chooseToDiscard |
+| 随机/盲目决策 | 3 | 攻防切换(30%随机)、睡觉 chooseBool 无 AI、踝部加固纯交替切换 |
+| filter 缺 `get.attitude` 检查 | 2 | zhelong(蛰龙)、tihu(提壶)被动触发 |
+| 事件名/上下文错误 | 2 | wenda `event.name==='phase'`、wenda chooseControl 用 `get.event()` |
+| frequent 缺 `check()` | 1 | youji |
+
+### 跨文件分布
+
+| 文件 | 问题数 | 重点 |
+|------|--------|------|
+| character/ha/skill.js | 15 | 最多——技能数多且交互复杂 |
+| character/shen/skill.js | 12 | 划拳 + 刀盾体系 |
+| character/wu/skill.js | 10 | 服从/威压/义体管理 |
+| character/wa/skill.js | 6 | 标签缺失 + 高风险技能 |
+| card/treasure/skill.js | 3 | 狂暴 + 斯安威斯坦 + 网驱 |
+| card/armor/skill.js | 1 | 标签补齐 |
+| card/weapon/skill.js | 2 | attitude 修复 |
+| card/horse/skill.js | 0 | 踝部加固 ai 已修复（前轮） |
