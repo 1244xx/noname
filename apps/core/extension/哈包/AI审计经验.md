@@ -370,3 +370,98 @@ ai: {
 `derivation` 被展开为角色卡绿色按钮，指向的 skill 必须通过 `lib.translate[skill]` 和 `lib.translate[skill + "_info"]` 双重检查（L4266）。subskill 通常有翻译但没有独立的 `_info` → 被静默跳过。
 
 修复：确保 `derivation` 中每个名字都是顶级技能名，有翻译 + `_info`。
+
+---
+
+## 八、2026-06-08 新增审计问题模式（老司基 + 基委会开发）
+
+### 模式 AA：`_status` tracker 子技能无需 AI 块
+
+tracker 子技能使用 `silent: true` 且完全是数据记录逻辑（不涉及玩家选择），归类为框架级基础设施，不需要 `ai:` 块。审计时标记为"无 AI 块但可豁免"：
+
+```js
+// ✅ tracker 子技能：无 AI 块但合法
+gangji_tracker_hp: {
+    trigger: { global: "damageAfter" },
+    filter(event, player) { return event.num > 0; },
+    silent: true,
+    content() { _status.gangji_hploss = true; },
+},
+```
+
+**审计规则**：`silent: true` + `content` 中无 `chooseXXX` 调用的子技能，豁免 AI 块检查。
+
+### 模式 AB：`_status` 追踪替代 `getHistory()` 扫描
+
+`roundEnd` 时刻用 `getHistory()` 扫描"本轮是否发生过 X"极易出错——`_round` 属性可能未设置、历史事件已被回收、`_status.currentPhase` 上下文已切换。
+
+修复：在事件发生时刻用 tracker 子技能设置 `_status` 标志位，`roundStart` 时重置。`roundEnd` 读取标志位即可。
+
+| 问题写法 | 修正写法 |
+|---------|---------|
+| `game.playerMap.forEach(p => p.getHistory("damage", ...))` | tracker 子技能 + `_status` 全局标志 |
+| `getHistory("lose")` + 遍历判断回合外 | `loseAfter` tracker 检查 `trigger.player !== _status.currentPhase` |
+
+### 模式 AC：`game.removeGlobalSkill` 需生命周期配对
+
+`game.addGlobalSkill` 挂载的技能如果不配对 `game.removeGlobalSkill`，会在所有玩家移除源技能后残留，导致孤立全局技能修改游戏规则。
+
+修复：`init` 中补挂（处理 late-join 场景），`onremove` 中条件移除（最后一个源技能持有者离开时）：
+
+```js
+init(player) {
+    if (_status.xxx) game.addGlobalSkill("effect_skill");
+},
+onremove(player) {
+    if (!game.hasPlayer(p => p !== player && p.hasSkill("source", null, null, false), true)) {
+        game.removeGlobalSkill("effect_skill");
+        delete _status.xxx;
+    }
+},
+```
+
+### 模式 AD：`game.playerMap` 是对象不是 Map
+
+`game.playerMap` 是 `{ [playerid]: Player }` 对象，没有 `.forEach()` 方法。
+
+```js
+// ❌ TypeError
+game.playerMap.forEach(...)
+
+// ✅
+game.filterPlayer().forEach(...)      // 所有存活玩家
+Object.values(game.playerMap).forEach(...)  // 所有玩家（含死亡）
+```
+
+此错误常见于参考 `_status.currentPhase` 等模式的开发中。
+
+### 模式 AE：`chooseBool` 投票需要 AI 策略（跨角色交互）
+
+多人投票场景中，每个投票者是独立的 Player 调用 `chooseBool`。每个调用必须有 `set("ai", ...)`，且 AI 回调运行在投票者上下文：
+
+```js
+// ✅ 每个投票者有独立 AI
+voter.chooseBool(`是否支持「${option}」？`)
+    .set("ai", () => {
+        // voter 在当前闭包中可用
+        if (option === "禁用乐不思蜀") return voter.getCards("j").some(c => c.name === "lebu");
+        return Math.random() < 0.5;
+    })
+```
+
+**属于 模式 F（跨角色交互无 AI）的特化子类型。**
+
+### 模式 AF：`markSkill` 打在非技能持有者身上
+
+一般情况下 `markSkill` 在 `content` 中打给 `player`（技能持有者）。但在"当前回合角色显示公共限制"场景中，标记打给 `_status.currentPhase`：
+
+```js
+// 标记打在非技能持有者身上
+content() {
+    const current = _status.currentPhase;
+    current.storage.minsu_damage = 0;
+    current.markSkill("minsu_limit");  // ← 不是 this.player！
+},
+```
+
+标记的 `intro.content(storage, player)` 中 `player` 是**标记所在的玩家**（即当前回合角色），不是技能持有者。审计时需确认 storage 和 intro 的 owner 一致。

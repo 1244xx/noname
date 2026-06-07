@@ -28,6 +28,11 @@ import yitiTreasureSkills from "../card/treasure/skill.js";
 import yitiTreasureTranslates from "../card/treasure/translate.js";
 import yitiSkills from "../card/yiti_skill.js";
 import yitiTranslates from "../card/yiti_translate.js";
+import characterTitle from "../character/ha/characterTitle.js";
+import shenCharacterTitle from "../character/shen/characterTitle.js";
+import waCharacterTitle from "../character/wa/characterTitle.js";
+import wuCharacterTitle from "../character/wu/characterTitle.js";
+import yaCharacterTitle from "../character/ya/characterTitle.js";
 
 const characterSort = {
 	haha_shen: Object.keys(shenCharacter),
@@ -67,6 +72,14 @@ export async function precontent(config, pack) {
 		Object.assign(lib.skill, yitiArmorSkills);
 		Object.assign(lib.skill, yitiHorseSkills);
 		Object.assign(lib.skill, yitiTreasureSkills);
+
+		// ==================== 称号注册 ====================
+		if (!lib.characterTitle) lib.characterTitle = {};
+		Object.assign(lib.characterTitle, characterTitle);
+		Object.assign(lib.characterTitle, shenCharacterTitle);
+		Object.assign(lib.characterTitle, waCharacterTitle);
+		Object.assign(lib.characterTitle, yaCharacterTitle);
+		Object.assign(lib.characterTitle, wuCharacterTitle);
 
 		// ==================== 武将：一个包，内部分组 ====================
 		const allCharacters = Object.assign({}, character, shenCharacter, waCharacter, yaCharacter, wuCharacter);
