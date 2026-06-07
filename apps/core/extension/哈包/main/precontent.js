@@ -8,6 +8,9 @@ import shenTranslate from "../character/shen/translate.js";
 import waCharacter from "../character/wa/character.js";
 import waSkill from "../character/wa/skill.js";
 import waTranslate from "../character/wa/translate.js";
+import yaCharacter from "../character/ya/character.js";
+import yaSkill from "../character/ya/skill.js";
+import yaTranslate from "../character/ya/translate.js";
 import wuCharacter from "../character/wu/character.js";
 import wuSkill from "../character/wu/skill.js";
 import wuTranslate from "../character/wu/translate.js";
@@ -30,6 +33,7 @@ const characterSort = {
 	haha_shen: Object.keys(shenCharacter),
 	haha_ha: Object.keys(character),
 	haha_wa: Object.keys(waCharacter),
+	haha_ya: Object.keys(yaCharacter),
 	haha_wu: Object.keys(wuCharacter),
 };
 
@@ -45,6 +49,7 @@ export async function precontent(config, pack) {
 		Object.assign(lib.translate, translate);
 		Object.assign(lib.translate, shenTranslate);
 		Object.assign(lib.translate, waTranslate);
+		Object.assign(lib.translate, yaTranslate);
 		Object.assign(lib.translate, wuTranslate);
 		Object.assign(lib.translate, yitiTranslates);
 		Object.assign(lib.translate, yitiWeaponTranslates);
@@ -55,6 +60,7 @@ export async function precontent(config, pack) {
 		Object.assign(lib.skill, skill);
 		Object.assign(lib.skill, shenSkill);
 		Object.assign(lib.skill, waSkill);
+		Object.assign(lib.skill, yaSkill);
 		Object.assign(lib.skill, wuSkill);
 		Object.assign(lib.skill, yitiSkills);
 		Object.assign(lib.skill, yitiWeaponSkills);
@@ -63,7 +69,7 @@ export async function precontent(config, pack) {
 		Object.assign(lib.skill, yitiTreasureSkills);
 
 		// ==================== 武将：一个包，内部分组 ====================
-		const allCharacters = Object.assign({}, character, shenCharacter, waCharacter, wuCharacter);
+		const allCharacters = Object.assign({}, character, shenCharacter, waCharacter, yaCharacter, wuCharacter);
 		const PACK_NAME = "哈包";
 
 		lib.translate[PACK_NAME + "_character_config"] = "哈包";
@@ -77,6 +83,7 @@ export async function precontent(config, pack) {
 		lib.translate.haha_ha = "哈";
 		lib.translate.haha_shen = "神";
 		lib.translate.haha_wa = "哇";
+		lib.translate.haha_ya = "呀";
 		lib.translate.haha_wu = "呜";
 
 		// 注册武将包（仅注册到可选列表，不强制启用）

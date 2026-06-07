@@ -145,14 +145,15 @@ const skill = {
 		trigger: { player: ["useCardAfter", "respondAfter"] },
 		filter(event, player) {
 			if (!event.card || event.card.name !== "shan") return false;
-			return player.canUse("sha");
+			return player.countCards("h", "sha") > 0 || player.hasSha();
 		},
 		async cost(event, trigger, player) {
 			event.result = await player
 				.chooseBool("是否发动【克伦齐科夫】使用一张杀？")
-				.set("ai", () => game.hasPlayer(current => {
-					return get.attitude(player, current) < 0 && player.canUse("sha", current);
-				}))
+				.set("ai", () => {
+					const attitude = get.attitude(player, trigger.player);
+					return attitude < 0 && player.countCards("h", "sha") > 0;
+				})
 				.forResult();
 		},
 		async content(event, trigger, player) {

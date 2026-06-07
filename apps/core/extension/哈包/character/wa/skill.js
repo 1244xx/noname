@@ -590,7 +590,7 @@ const skill = {
 	},
 };
 
-async function executeChangpao(initiator, depth) {
+async function executeChangpao(initiator, depth, fixedTarget = null) {
 	if (depth >= 99) {
 		game.log("长跑已达最大层数（99层），强制结束");
 		return;
@@ -611,15 +611,19 @@ async function executeChangpao(initiator, depth) {
 	const discardedCard = discardResult.cards[0];
 	const X = get.number(discardedCard);
 
-	const targetResult = await initiator.chooseTarget(true, "长跑：请选择一名其他角色")
-		.set("filterTarget", (card, p, target) => target !== p)
-		.set("ai", target => {
-			const att = get.attitude(initiator, target);
-			return att < 0 ? 1 : -1;
-		})
-		.forResult();
-
-	const target = targetResult.targets[0];
+	let target;
+	if (fixedTarget) {
+		target = fixedTarget;
+	} else {
+		const targetResult = await initiator.chooseTarget(true, "长跑：请选择一名其他角色")
+			.set("filterTarget", (card, p, target) => target !== p)
+			.set("ai", target => {
+				const att = get.attitude(initiator, target);
+				return att < 0 ? 1 : -1;
+			})
+			.forResult();
+		target = targetResult.targets[0];
+	}
 	initiator.logSkill("changpao", target);
 
 	const state = {
@@ -682,7 +686,8 @@ async function executeChangpao(initiator, depth) {
 
 	if (vetoed) {
 		game.log(vetoer, "废除了长跑的结果");
-		await executeChangpao(vetoer, depth + 1);
+		const opponent = vetoer === initiator ? target : initiator;
+		await executeChangpao(vetoer, depth + 1, opponent);
 	} else {
 		if (state.shaCard) {
 			const winner = state.shaFinder === "initiator" ? initiator : target;

@@ -155,7 +155,7 @@ const skill = {
 			});
 			judgeEvent.judge2 = result => result.bool;
 			const result = await judgeEvent.forResult();
-			if (!result.bool) {
+			if (result && !result.bool) {
 				game.log(player, "发动了智子，", trigger.card, "被无效了");
 				trigger.cancel();
 			}

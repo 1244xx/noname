@@ -1187,7 +1187,7 @@ const skill = {
 			const sameColorCount = niCards.filter(c => get.color(c) === cardColor).length;
 
 			player.storage._kuihua_target = target;
-			player.storage._kuihua_trigger = trigger;
+			player.storage._kuihua_trigger = trigger.getParent();
 			if (sameColorCount <= 1) {
 				await player.useSkill("yangliu", target);
 			} else {
