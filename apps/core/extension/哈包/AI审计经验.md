@@ -465,3 +465,34 @@ content() {
 ```
 
 标记的 `intro.content(storage, player)` 中 `player` 是**标记所在的玩家**（即当前回合角色），不是技能持有者。审计时需确认 storage 和 intro 的 owner 一致。
+
+---
+
+## 九、Git 提交审计问题模式（2026-06-08 新增）
+
+### 模式 AG：`.gitignore` 屏蔽导致新文件漏提交（已犯 >10 次）
+
+`apps/core/.gitignore` 中有 `extension/**`，整个扩展目录被默认忽略。AI 创建新文件后执行 `git status`，只看到已追踪文件的修改，**完全看不到新文件**。`git add` 不带 `-f` 也直接被拦截。
+
+**审计规则（每次提交前必须执行）**：
+
+```bash
+# 1. 扫描未追踪文件（不受 .gitignore 影响的视角）
+git ls-files --others --exclude-standard -- "apps/core/extension/哈包/"
+
+# 2. 强制添加
+git add -f <文件路径>
+```
+
+**常见漏加清单**：
+- `characterTitle.js`（新创建的分组文件）
+- 角色/卡牌图片 `*.png`
+- 新建的 skill.js / translate.js 等
+
+**审计签名**：`git status` 输出中 `"no changes added to commit"` 且没有任何 "Untracked files" 区块 → **必须怀疑有文件被 `.gitignore` 隐藏**。切换到 `git ls-files --others --exclude-standard` 复查。
+
+### 模式 AH：补充提交时 AI 未重新扫描
+
+上一轮 `git commit` 遗漏文件后，AI 补 `git add -f` + `git commit --amend` 或新 commit 时，**又只加了被提醒的那几个**，没有重新执行 `git ls-files --others --exclude-standard` 完整扫描。
+
+**修复**：补交前**必须重新执行完整扫描**。
