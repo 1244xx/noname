@@ -19,6 +19,12 @@ const character = {
 		skills: ["gangji", "minsu"],
 		isZhugong: true,
 	},
+	huanshusiji: {
+		sex: "none",
+		group: "ya",
+		hp: 3,
+		skills: ["haixiao", "lianwu"],
+	},
 };
 for (let i in character) {
 	character[i].img = "extension/哈包/image/character/ya/" + i + ".png";

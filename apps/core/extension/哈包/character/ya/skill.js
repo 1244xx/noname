@@ -1086,6 +1086,281 @@ const skill = {
 		},
 	},
 
+	// ==================== 骸枭 ====================
+	haixiao: {
+		audio: 2,
+		enable: ["chooseToRespond", "chooseToUse"],
+		viewAsFilter(player) {
+			// 手牌中是否有未被选为被转化牌的基本/锦囊
+			const used = player.storage.haixiao_targets || [];
+			return player.countCards("h", c => {
+				const type = get.type(c, "trick");
+				return (type === "basic" || type === "trick") && !used.includes(c.cardid);
+			}) > 0;
+		},
+		group: ["haixiao_guess"],
+		chooseButton: {
+			dialog(event, player) {
+				const used = player.storage.haixiao_targets || [];
+				const cards = player.getCards("h");
+				const vcards = [];
+				for (const c of cards) {
+					const type = get.type(c, "trick");
+					if ((type === "basic" || type === "trick") && !used.includes(c.cardid)) {
+						vcards.push([type, "", c.name, c.cardid]);
+					}
+				}
+				if (!vcards.length) return null;
+				return ui.create.dialog("骸枭：选择转化成的牌", [vcards, "vcard"]);
+			},
+			check(button) {
+				return _status.event.player.getUseValue({ name: button.link[2] });
+			},
+			backup(links, player) {
+				const targetCardId = links[0][3];
+				const targetName = links[0][2];
+
+				return {
+					audio: "haixiao",
+					filterCard: true,
+					selectCard: 1,
+					position: "h",
+
+					filterTarget(card, player, target) {
+						return target !== player;
+					},
+
+					// 排除自己后是否有合法目标
+					viewAsFilter(player) {
+						const info = get.info({ name: targetName });
+						const evt = _status.event;
+						if (evt.name === "chooseToUse") {
+							return game.hasPlayer(t => t !== player && lib.filter.targetEnabled2({ name: targetName, isCard: true }, player, t));
+						}
+						return true;
+					},
+
+					viewAs(cards, player) {
+						if (!cards.length || cards[0].cardid == null) return null;
+						return {
+							name: targetName,
+							isCard: true,
+							storage: {
+								haixiao: {
+									targetCardId: targetCardId,
+									originalCardId: cards[0].cardid,
+									originalType: get.type(cards[0], "trick"),
+									originalName: get.name(cards[0]),
+								},
+							},
+						};
+					},
+
+					check(card) {
+						const player = _status.event.player;
+						return player.getUseValue({ name: targetName }) - get.value(card) / 6;
+					},
+
+					ai: {
+						result: {
+							target(player, target) {
+								if (get.attitude(player, target) < 0) return 1;
+								return 0;
+							},
+						},
+					},
+				};
+			},
+		},
+
+		ai: {
+			save: true,
+			respondSha: true,
+			respondShan: true,
+			fireAttack: true,
+			skillTagFilter(player, tag, arg) {
+				const used = player.storage.haixiao_targets || [];
+				if (!player.countCards("h", c => {
+					const type = get.type(c, "trick");
+					return (type === "basic" || type === "trick") && !used.includes(c.cardid);
+				})) return false;
+			},
+			order: 5,
+			result: { player: 0.5 },
+		},
+	},
+
+	// 骸枭：猜牌效果
+	haixiao_guess: {
+		trigger: { player: "useCardToTargeted" },
+		filter(event, player) {
+			return event.card?.storage?.haixiao != null && event.target != null;
+		},
+		forced: true,
+		async content(event, trigger, player) {
+			const data = trigger.card.storage.haixiao;
+
+			// 标记被转化牌 cardid：后续不能再被选
+			player.storage.haixiao_targets ??= [];
+			if (!player.storage.haixiao_targets.includes(data.targetCardId)) {
+				player.storage.haixiao_targets.push(data.targetCardId);
+			}
+
+			const target = trigger.target;
+			player.logSkill("haixiao", target);
+
+			// 目标猜测原始牌类型
+			const { control } = await target
+				.chooseControl("基本牌", "锦囊牌", "装备牌")
+				.set("prompt", `骸枭：请猜测${get.translation(trigger.card)}的原始类型`)
+				.set("ai", () => {
+					const evt = get.event().getTrigger();
+					const p = evt.player;
+					if (!p) return "基本牌";
+					const basicCount = p.getCards("h").filter(c => get.type(c, "trick") === "basic").length;
+					const trickCount = p.getCards("h").filter(c => get.type(c, "trick") === "trick").length;
+					const equipCount = p.getCards("h").filter(c => get.type(c, "trick") === "equip").length;
+					if (basicCount >= trickCount && basicCount >= equipCount) return "基本牌";
+					if (equipCount >= basicCount && equipCount >= trickCount) return "装备牌";
+					return "锦囊牌";
+				})
+				.forResult();
+
+			const typeMap = { "基本牌": "basic", "锦囊牌": "trick", "装备牌": "equip" };
+			const guessed = typeMap[control];
+			const originalType = data.originalType;
+
+			if (guessed === originalType) {
+				// 正确：其摸一张牌
+				if (target.isAlive()) await target.draw();
+
+				const originalName = data.originalName;
+				if (originalName !== trigger.card.name) {
+					// 牌名不同 → 对其无效
+					trigger.excluded.add(target);
+
+					// 原始牌为杀 → 视为对其使用一张杀
+					if (originalName === "sha" && target.isAlive()) {
+						trigger.excluded.remove(target);
+						await player.useCard({ name: "sha" }, target);
+					}
+				}
+			} else {
+				// 错误：其弃一张牌
+				if (target.countCards("he") > 0) {
+					await target.chooseToDiscard("he", true, "骸枭：请弃置一张牌")
+						.set("ai", card => 6 - get.value(card));
+				}
+
+				// 原始牌和转化牌均为杀 → 伤害+1
+				const originalName = data.originalName;
+				if (originalName === "sha" && trigger.card.name === "sha") {
+					trigger.getParent().baseDamage = (trigger.getParent().baseDamage || 1) + 1;
+				}
+			}
+		},
+	},
+
+	// ==================== 莲雾 - 限定技 ====================
+	lianwu: {
+		audio: 2,
+		enable: "phaseUse",
+		limited: true,
+		filter(event, player) {
+			return player.countCards("h") > 0;
+		},
+		async content(event, trigger, player) {
+			player.awakenSkill("lianwu");
+			player.logSkill("lianwu");
+
+			// Step 1: 手牌调整至 4 张
+			const handCount = player.countCards("h");
+			if (handCount < 4) {
+				await player.draw(4 - handCount);
+			} else if (handCount > 4) {
+				await player.chooseToDiscard("h", handCount - 4, true)
+					.set("ai", card => 6 - get.value(card));
+			}
+
+			// Step 2: 按类型分类手牌
+			const cards = player.getCards("h");
+			const groups = { basic: [], trick: [], equip: [] };
+			for (const c of cards) {
+				const type = get.type(c, "trick");
+				if (groups[type]) groups[type].push(c);
+			}
+
+			// 类型→锦囊映射
+			const typeToAOE = { basic: "taoyuan_jieyi", trick: "nanman_ruqin", equip: "wanjian_qifa" };
+			const aoeToType = { taoyuan_jieyi: "basic", nanman_ruqin: "trick", wanjian_qifa: "equip" };
+
+			// 构建可用列表
+			const available = [];
+			for (const [type, name] of Object.entries(typeToAOE)) {
+				if (groups[type] && groups[type].length > 0) available.push(name);
+			}
+			if (!available.length) return;
+
+			// Step 3: 按玩家选择的顺序依次使用
+			const used = [];
+			while (true) {
+				const unused = available.filter(n => !used.includes(n));
+				if (!unused.length) break;
+
+				// 检查还有没有对应的手牌
+				const hasCard = unused.some(n => {
+					const t = aoeToType[n];
+					return groups[t] && groups[t].length > 0;
+				});
+				if (!hasCard) break;
+
+				const choices = unused.filter(n => {
+					const t = aoeToType[n];
+					return groups[t] && groups[t].length > 0;
+				});
+				if (!choices.length) break;
+
+				const { control } = await player
+					.chooseControl(...choices)
+					.set("prompt", "莲雾：请选择要使用的锦囊")
+					.set("ai", () => {
+						const list = get.event()._controls;
+						if (list.includes("nanman_ruqin")) return list.indexOf("nanman_ruqin");
+						if (list.includes("wanjian_qifa")) return list.indexOf("wanjian_qifa");
+						return 0;
+					})
+					.forResult();
+
+				used.push(control);
+
+				// 消耗对应类型的一张手牌
+				const aoeType = aoeToType[control];
+				if (!groups[aoeType] || !groups[aoeType].length) break;
+
+				const discardCard = groups[aoeType].shift();
+				if (get.position(discardCard, true) === "h") {
+					await player.lose(discardCard, "visible");
+					discardCard.discard();
+				}
+
+				// 使用虚拟 AOE 锦囊
+				await player.useCard({ name: control }, player);
+			}
+		},
+		ai: {
+			order: 10,
+			halfneg: true,
+			result: {
+				player(player) {
+					const cards = player.countCards("h");
+					if (cards < 2) return 0;
+					const types = new Set(player.getCards("h").map(c => get.type(c, "trick")));
+					return types.size;
+				},
+			},
+		},
+	},
+
 };
 
 

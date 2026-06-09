@@ -27,6 +27,12 @@ const translate = {
 	minsu: "民诉",
 	minsu_info: `游戏开始时，每名角色投票三项：1、禁用并可重铸乐不思蜀；2、禁用并可重铸兵粮寸断；3、每回合至多两点伤害可造成；4、每回合至多三张牌可获得；5、每回合至多两张牌可弃置。票数最多的三项持续至游戏结束，如票数相同则均采纳。若你为主公，改为采纳票数最多的四项。`,
 	minsu_limit: "民诉",
+	
+	huanshusiji: "幻术斯基",
+	haixiao: "骸枭",
+	haixiao_info: `你可将一张手牌转化为手牌中一张基本牌或锦囊牌使用或打出，每张牌只能被转化一次，你从牌的目标中排除，目标需猜测该牌原始类型：基本/锦囊/装备。<br><span style="color:#00A400">正确：</span>其摸一张牌，原始牌转化牌牌名不同则对其无效，但若原始牌为杀则依然可视为对其使用该杀；<br><span style="color:#A40000">错误：</span>其弃一张牌，原始牌转化牌均为杀则伤害+1。`,
+	lianwu: "莲雾",
+	lianwu_info: `限定技，出牌阶段，你将手牌调整至4张，技能期间手牌中<span style="color:#A40000">基本牌</span>/<span style="color:#00A400">锦囊牌</span>/<span style="color:#0000A4">装备牌</span>转化为<span style="color:#A40000">桃园结义</span>/<span style="color:#00A400">南蛮入侵</span>/<span style="color:#0000A4">万箭齐发</span>，并按任意顺序使用这三种锦囊牌各一张。`,
 };
 
 export default translate;
